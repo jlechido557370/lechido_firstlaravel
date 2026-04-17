@@ -39,4 +39,9 @@ return [
         'key' => env('GOOGLE_BOOKS_API_KEY'),
     ],
 
+    'finverse' => [
+    'client_id'     => env('FINVERSE_CLIENT_ID'),
+    'client_secret' => env('FINVERSE_CLIENT_SECRET'),
+],
+
 ];

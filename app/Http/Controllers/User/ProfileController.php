@@ -9,49 +9,43 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class ProfileController extends Controller
 {
-    // ── Own profile page ─────────────────────────────────────────────────────
     public function show()
     {
         $user = auth()->user();
 
         $borrowHistory = BorrowRecord::with('book')
             ->where('user_id', $user->id)
-            ->latest()
-            ->get();
+            ->latest()->get();
 
         $ratings = BookReview::with('book')
             ->where('user_id', $user->id)
-            ->latest()
-            ->take(10)
-            ->get();
+            ->latest()->take(10)->get();
 
         return view('user.profile', compact('user', 'borrowHistory', 'ratings'));
     }
 
-    // ── Public profile (anyone can view) ─────────────────────────────────────
     public function publicProfile(User $user)
     {
         $borrowCount = BorrowRecord::where('user_id', $user->id)->count();
-        $ratings = BookReview::with('book')
+        $ratings     = BookReview::with('book')
             ->where('user_id', $user->id)
-            ->latest()
-            ->take(6)
-            ->get();
+            ->latest()->take(6)->get();
 
-        return view('user.public_profile', compact('user', 'borrowCount', 'ratings'));
+        $isFollowing = auth()->check() ? auth()->user()->isFollowing($user) : false;
+
+        return view('user.public_profile', compact('user', 'borrowCount', 'ratings', 'isFollowing'));
     }
 
     public function ratings()
     {
-        $user = auth()->user();
-
+        $user    = auth()->user();
         $ratings = BookReview::with(['book', 'book.reviews'])
             ->where('user_id', $user->id)
-            ->latest()
-            ->get();
+            ->latest()->get();
 
         return view('user.ratings', compact('user', 'ratings'));
     }
@@ -60,29 +54,30 @@ class ProfileController extends Controller
     {
         $ratings = BookReview::with(['book', 'book.reviews'])
             ->where('user_id', $user->id)
-            ->latest()
-            ->get();
+            ->latest()->get();
 
         return view('user.ratings', compact('user', 'ratings'));
     }
 
-    // ── Update name / email / bio ─────────────────────────────────────────────
     public function updateProfile(Request $request)
     {
         $user = auth()->user();
 
         $data = $request->validate([
-            'name'  => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'unique:users,email,' . $user->id],
-            'bio'   => ['nullable', 'string', 'max:500'],
+            'name'      => ['required', 'string', 'max:255'],
+            'username'  => ['required', 'string', 'min:3', 'max:30', 'regex:/^[a-zA-Z0-9_]+$/', Rule::unique('users')->ignore($user->id)],
+            'email'     => ['required', 'email', Rule::unique('users')->ignore($user->id)],
+            'bio'       => ['nullable', 'string', 'max:500'],
+            'gender'    => ['nullable', Rule::in(['male', 'female', 'prefer_not_to_say'])],
+            'allow_dms' => ['boolean'],
         ]);
 
+        $data['allow_dms'] = $request->has('allow_dms');
         $user->update($data);
 
         return back()->with('success', 'Profile updated successfully.');
     }
 
-    // ── Upload avatar ─────────────────────────────────────────────────────────
     public function updateAvatar(Request $request)
     {
         $request->validate([
@@ -91,20 +86,16 @@ class ProfileController extends Controller
 
         $user = auth()->user();
 
-        // Delete old avatar if it exists
         if ($user->avatar) {
             Storage::disk('public')->delete($user->avatar);
         }
 
-        // Store new avatar in storage/app/public/avatars/
         $path = $request->file('avatar')->store('avatars', 'public');
-
         $user->update(['avatar' => $path]);
 
         return back()->with('success', 'Profile picture updated.');
     }
 
-    // ── Remove avatar ─────────────────────────────────────────────────────────
     public function removeAvatar()
     {
         $user = auth()->user();
@@ -117,7 +108,6 @@ class ProfileController extends Controller
         return back()->with('success', 'Profile picture removed.');
     }
 
-    // ── Change password ───────────────────────────────────────────────────────
     public function updatePassword(Request $request)
     {
         $request->validate([
@@ -125,15 +115,11 @@ class ProfileController extends Controller
             'password'         => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
-        if (! Hash::check($request->current_password, auth()->user()->password)) {
-            return back()->withErrors([
-                'current_password' => 'The current password is incorrect.',
-            ]);
+        if (!Hash::check($request->current_password, auth()->user()->password)) {
+            return back()->withErrors(['current_password' => 'The current password is incorrect.']);
         }
 
-        auth()->user()->update([
-            'password' => Hash::make($request->password),
-        ]);
+        auth()->user()->update(['password' => Hash::make($request->password)]);
 
         return back()->with('success', 'Password changed successfully.');
     }

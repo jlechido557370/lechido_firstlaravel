@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Book;
 use App\Models\BorrowRecord;
+use App\Models\Payment;
 use App\Models\Reservation;
+use App\Models\UserNotification;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -23,7 +25,7 @@ class DashboardController extends Controller
             ->whereNull('returned_at')
             ->get();
 
-        $borrowingHistory = BorrowRecord::with('book')
+        $borrowingHistory = BorrowRecord::with(['book', 'payments'])
             ->where('user_id', $user->id)
             ->whereNotNull('returned_at')
             ->latest()
@@ -32,6 +34,11 @@ class DashboardController extends Controller
         $reservations = Reservation::with('book')
             ->where('user_id', $user->id)
             ->where('status', 'pending')
+            ->get();
+
+        $paymentLogs = Payment::with('borrowRecord.book')
+            ->where('user_id', $user->id)
+            ->latest()
             ->get();
 
         $stats = [
@@ -43,31 +50,65 @@ class DashboardController extends Controller
 
         $totalFines = BorrowRecord::where('user_id', $user->id)
             ->where('fine_amount', '>', 0)
+            ->where('fine_paid', false)
             ->sum('fine_amount');
 
+        $this->generateNotifications($user->id, $currentBorrowings);
+
         return view('user.dashboard', compact(
-            'stats', 'currentBorrowings',
-            'borrowingHistory', 'reservations', 'totalFines'
+            'stats', 'currentBorrowings', 'borrowingHistory',
+            'reservations', 'totalFines', 'paymentLogs'
         ));
+    }
+
+    private function generateNotifications(int $userId, $borrowings): void
+    {
+        foreach ($borrowings as $borrowing) {
+            if ($borrowing->is_overdue) {
+                $exists = UserNotification::where('user_id', $userId)
+                    ->where('borrow_record_id', $borrowing->id)
+                    ->where('type', 'overdue')
+                    ->exists();
+
+                if (!$exists) {
+                    $bookTitle = $borrowing->book->title ?? 'a book';
+                    UserNotification::create([
+                        'user_id'          => $userId,
+                        'type'             => 'overdue',
+                        'message'          => "Your borrow of \"{$bookTitle}\" is overdue. Fine: ₱" . number_format($borrowing->calculateFine(), 2) . ' (₱5/day).',
+                        'borrow_record_id' => $borrowing->id,
+                    ]);
+                }
+            } elseif ($borrowing->is_due_soon) {
+                $exists = UserNotification::where('user_id', $userId)
+                    ->where('borrow_record_id', $borrowing->id)
+                    ->where('type', 'due_soon')
+                    ->exists();
+
+                if (!$exists) {
+                    $bookTitle = $borrowing->book->title ?? 'a book';
+                    UserNotification::create([
+                        'user_id'          => $userId,
+                        'type'             => 'due_soon',
+                        'message'          => "Your borrow of \"{$bookTitle}\" is due in less than 24 hours. Return by: " . $borrowing->due_date->format('M d, Y H:i') . '.',
+                        'borrow_record_id' => $borrowing->id,
+                    ]);
+                }
+            }
+        }
     }
 
     public function borrowBook(Book $book)
     {
         $user = auth()->user();
 
-        $activeBorrows = BorrowRecord::where('user_id', $user->id)
-            ->whereNull('returned_at')
-            ->count();
-
+        $activeBorrows = BorrowRecord::where('user_id', $user->id)->whereNull('returned_at')->count();
         if ($activeBorrows >= self::MAX_BORROWS) {
             return back()->with('error', 'You have reached the maximum limit of ' . self::MAX_BORROWS . ' borrowed books.');
         }
 
         $alreadyBorrowed = BorrowRecord::where('user_id', $user->id)
-            ->where('book_id', $book->id)
-            ->whereNull('returned_at')
-            ->exists();
-
+            ->where('book_id', $book->id)->whereNull('returned_at')->exists();
         if ($alreadyBorrowed) {
             return back()->with('error', 'You have already borrowed this book.');
         }
@@ -105,6 +146,11 @@ class DashboardController extends Controller
         }
 
         $fine = $borrowing->calculateFine();
+
+        if ($fine > 0 && !$borrowing->fine_paid) {
+            return back()->with('error', "You have an outstanding fine of ₱{$fine}. Please pay your fine before returning the book.");
+        }
+
         $borrowing->update(['returned_at' => now(), 'fine_amount' => $fine]);
 
         if ($borrowing->book) {
@@ -113,11 +159,10 @@ class DashboardController extends Controller
 
         $fineTxt   = $fine > 0 ? " Fine: ₱{$fine}" : '';
         $bookTitle = $borrowing->book->title ?? 'book';
-        $userName  = auth()->user()?->name ?? 'user';
 
         ActivityLog::record(
             'book_returned',
-            "{$userName} returned '{$bookTitle}'.{$fineTxt}",
+            auth()->user()->name . " returned '{$bookTitle}'.{$fineTxt}",
             ['borrow_id' => $borrowing->id, 'fine' => $fine]
         );
 
@@ -129,10 +174,7 @@ class DashboardController extends Controller
         $user = auth()->user();
 
         $alreadyReserved = Reservation::where('user_id', $user->id)
-            ->where('book_id', $book->id)
-            ->where('status', 'pending')
-            ->exists();
-
+            ->where('book_id', $book->id)->where('status', 'pending')->exists();
         if ($alreadyReserved) {
             return back()->with('error', 'You already have a pending reservation for this book.');
         }
@@ -141,14 +183,11 @@ class DashboardController extends Controller
             return back()->with('error', 'This book is available — you can borrow it directly.');
         }
 
-        Reservation::create([
-            'user_id' => $user->id,
-            'book_id' => $book->id,
-        ]);
+        Reservation::create(['user_id' => $user->id, 'book_id' => $book->id]);
 
         ActivityLog::record('book_reserved', "{$user->name} reserved '{$book->title}'.", ['book_id' => $book->id]);
 
-        return back()->with('success', "'{$book->title}' has been reserved. You'll be notified when it's available.");
+        return back()->with('success', "'{$book->title}' has been reserved. You'll be notified when available.");
     }
 
     public function cancelReservation(Reservation $reservation)
@@ -158,11 +197,9 @@ class DashboardController extends Controller
         }
 
         $bookTitle = $reservation->book->title ?? 'book';
-        $userName  = auth()->user()?->name ?? 'user';
-
         $reservation->update(['status' => 'cancelled']);
 
-        ActivityLog::record('reservation_cancelled', "{$userName} cancelled reservation for '{$bookTitle}'.");
+        ActivityLog::record('reservation_cancelled', auth()->user()->name . " cancelled reservation for '{$bookTitle}'.");
 
         return back()->with('success', 'Reservation cancelled.');
     }

@@ -46,7 +46,12 @@
                 @csrf
                 @method('PUT')
                 <div style="margin-bottom: 12px;">
-                    <label>Name</label>
+                    <label>Username <span class="muted" style="font-size:12px;">(letters, numbers, underscores — used for login)</span></label>
+                    <input type="text" name="username" value="{{ old('username', $user->username) }}" required pattern="[a-zA-Z0-9_]+" minlength="3" maxlength="30">
+                    @error('username')<div style="color:#b91c1c; font-size:13px;">{{ $message }}</div>@enderror
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label>Full Name</label>
                     <input type="text" name="name" value="{{ old('name', $user->name) }}" required>
                     @error('name')<div style="color:#b91c1c; font-size:13px;">{{ $message }}</div>@enderror
                 </div>
@@ -57,8 +62,25 @@
                 </div>
                 <div style="margin-bottom: 12px;">
                     <label>Bio <span class="muted" style="font-size:12px;">(max 500 characters)</span></label>
-                    <textarea name="bio" rows="4" maxlength="500" placeholder="Tell others a little about yourself…">{{ old('bio', $user->bio) }}</textarea>
+                    <textarea name="bio" rows="4" maxlength="500">{{ old('bio', $user->bio) }}</textarea>
                     @error('bio')<div style="color:#b91c1c; font-size:13px;">{{ $message }}</div>@enderror
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label>Gender</label>
+                    <div style="display:flex; gap:20px; margin-top:6px; flex-wrap:wrap;">
+                        @foreach(['male' => 'Male', 'female' => 'Female', 'prefer_not_to_say' => 'Prefer not to say'] as $val => $label)
+                            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:normal;">
+                                <input type="radio" name="gender" value="{{ $val }}" {{ old('gender', $user->gender) === $val ? 'checked' : '' }} style="width:auto;">
+                                {{ $label }}
+                            </label>
+                        @endforeach
+                    </div>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:normal;">
+                        <input type="checkbox" name="allow_dms" value="1" {{ $user->allow_dms ? 'checked' : '' }} style="width:auto;">
+                        Allow other users to send me direct messages
+                    </label>
                 </div>
                 <button type="submit">Save Profile</button>
             </form>

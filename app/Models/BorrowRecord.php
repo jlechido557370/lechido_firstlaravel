@@ -13,16 +13,18 @@ class BorrowRecord extends Model
         'due_date',
         'returned_at',
         'fine_amount',
+        'fine_paid',
     ];
 
     protected $casts = [
-        'borrowed_at'  => 'datetime',
-        'due_date'     => 'datetime',
-        'returned_at'  => 'datetime',
-        'fine_amount'  => 'decimal:2',
+        'borrowed_at' => 'datetime',
+        'due_date'    => 'datetime',
+        'returned_at' => 'datetime',
+        'fine_amount' => 'decimal:2',
+        'fine_paid'   => 'boolean',
     ];
 
-    const FINE_PER_DAY = 5.00; // PHP 5 per overdue day
+    const FINE_PER_DAY = 5.00;
 
     public function book()
     {
@@ -34,22 +36,33 @@ class BorrowRecord extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function payments()
+    {
+        return $this->hasMany(Payment::class, 'borrow_record_id');
+    }
+
     public function getIsOverdueAttribute(): bool
     {
         return is_null($this->returned_at) && $this->due_date?->isPast();
     }
 
-    /**
-     * Calculate fine based on days overdue.
-     * Uses returned_at if returned, otherwise uses now.
-     */
+    public function getIsDueSoonAttribute(): bool
+    {
+        if ($this->returned_at || !$this->due_date) return false;
+        $hoursLeft = now()->diffInHours($this->due_date, false);
+        return $hoursLeft >= 0 && $hoursLeft <= 24;
+    }
+
     public function calculateFine(): float
     {
-        if (! $this->due_date) return 0;
-
-        $endDate = $this->returned_at ?? now();
+        if (!$this->due_date) return 0;
+        $endDate  = $this->returned_at ?? now();
         $daysLate = max(0, $this->due_date->diffInDays($endDate, false));
-
         return $daysLate > 0 ? round($daysLate * self::FINE_PER_DAY, 2) : 0;
+    }
+
+    public function hasPendingPayment(): bool
+    {
+        return $this->payments()->where('status', 'pending')->exists();
     }
 }

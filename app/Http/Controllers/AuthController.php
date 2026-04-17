@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
@@ -16,22 +17,28 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
+        $request->validate([
+            'login'    => ['required', 'string'],
             'password' => ['required'],
         ]);
 
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
+        $login = $request->input('login');
+
+        // Try username first, then email
+        $user = User::where('username', $login)->orWhere('email', $login)->first();
+
+        if ($user && Hash::check($request->password, $user->password)) {
+            Auth::login($user, $request->boolean('remember'));
             $request->session()->regenerate();
 
-            return auth()->user()->role === 'admin'
-                ? redirect()->route('admin.dashboard')
-                : redirect()->route('user.dashboard');
+            if ($user->role === 'admin') return redirect()->route('admin.dashboard');
+            if ($user->role === 'staff') return redirect()->route('staff.dashboard');
+            return redirect()->route('user.dashboard');
         }
 
         return back()
-            ->withErrors(['email' => 'Invalid email or password.'])
-            ->onlyInput('email');
+            ->withErrors(['login' => 'Invalid username/email or password.'])
+            ->onlyInput('login');
     }
 
     public function showRegister()
@@ -42,16 +49,22 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'unique:users,email'],
+            'username' => ['required', 'string', 'min:3', 'max:30', 'unique:users,username', 'regex:/^[a-zA-Z0-9_]+$/'],
+            'name'     => ['required', 'string', 'max:255'],
+            'email'    => ['required', 'email', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'gender'   => ['nullable', Rule::in(['male', 'female', 'prefer_not_to_say'])],
+            'terms'    => ['accepted'],
         ]);
 
         $user = User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
+            'username' => $data['username'],
+            'name'     => $data['name'],
+            'email'    => $data['email'],
             'password' => Hash::make($data['password']),
-            'role' => 'user',
+            'gender'   => $data['gender'] ?? null,
+            'role'     => 'user',
+            'allow_dms'=> true,
         ]);
 
         Auth::login($user);
@@ -62,10 +75,8 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         Auth::logout();
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
         return redirect()->route('home');
     }
 }

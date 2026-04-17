@@ -1,99 +1,33 @@
 @extends('layouts.app')
 
-@section('title', 'Admin Dashboard')
+@section('title', 'Staff Dashboard')
 
 @section('content')
     <div class="card">
-        <h1>Admin Dashboard</h1>
-        <p class="muted">Full system control: books, borrowings, users, roles, payments, and logs.</p>
+        <h1>Staff Dashboard</h1>
+        <p class="muted">Monitor and manage borrowings, reservations, users, and payment logs.</p>
         <div class="row">
-            <a href="{{ route('admin.dashboard', ['section' => 'overview']) }}">Overview</a>
-            <a href="{{ route('admin.dashboard', ['section' => 'books']) }}">Books</a>
-            <a href="{{ route('admin.dashboard', ['section' => 'borrowings']) }}">Borrowings</a>
-            <a href="{{ route('admin.dashboard', ['section' => 'reservations']) }}">Reservations</a>
-            <a href="{{ route('admin.dashboard', ['section' => 'users']) }}">Users &amp; Roles</a>
-            <a href="{{ route('admin.dashboard', ['section' => 'submissions']) }}">
+            <a href="{{ route('staff.dashboard', ['section' => 'overview']) }}">Overview</a>
+            <a href="{{ route('staff.dashboard', ['section' => 'borrowings']) }}">Borrowings</a>
+            <a href="{{ route('staff.dashboard', ['section' => 'reservations']) }}">Reservations</a>
+            <a href="{{ route('staff.dashboard', ['section' => 'users']) }}">Users</a>
+            <a href="{{ route('staff.dashboard', ['section' => 'submissions']) }}">
                 Submissions @if($stats['pending_books'] > 0)({{ $stats['pending_books'] }})@endif
             </a>
-            <a href="{{ route('admin.dashboard', ['section' => 'payments']) }}">Payments</a>
-            <a href="{{ route('admin.dashboard', ['section' => 'logs']) }}">Logs</a>
+            <a href="{{ route('staff.dashboard', ['section' => 'payments']) }}">Payments</a>
+            <a href="{{ route('staff.dashboard', ['section' => 'logs']) }}">Logs</a>
         </div>
     </div>
 
     @if($section === 'overview')
         <div class="grid grid-4">
             <div class="card"><div class="muted">Total Books</div><div class="stats">{{ $stats['total_books'] }}</div></div>
-            <div class="card"><div class="muted">Available Copies</div><div class="stats">{{ $stats['available_copies'] }}</div></div>
             <div class="card"><div class="muted">Active Borrows</div><div class="stats">{{ $stats['active_borrows'] }}</div></div>
             <div class="card"><div class="muted">Overdue</div><div class="stats">{{ $stats['overdue'] }}</div></div>
+            <div class="card"><div class="muted">Total Users</div><div class="stats">{{ $stats['total_users'] }}</div></div>
         </div>
         <div class="card">
-            <div class="row">
-                <div><span class="muted">Total Users:</span> {{ $stats['total_users'] }}</div>
-                <div><span class="muted">Pending Unpaid Fines:</span> <strong>₱{{ number_format($stats['pending_fines'], 2) }}</strong></div>
-            </div>
-        </div>
-    @endif
-
-    @if($section === 'books')
-        <div class="card">
-            <h2>{{ $editingBook ? 'Edit Book' : 'Add Book' }}</h2>
-            <form method="POST" action="{{ $editingBook ? route('admin.books.update', $editingBook->id) : route('admin.books.store') }}">
-                @csrf
-                @if($editingBook) @method('PUT') @endif
-
-                <div class="row">
-                    <div><label>Title</label><input type="text" name="title" value="{{ old('title', $editingBook->title ?? '') }}" required></div>
-                    <div><label>Author</label><input type="text" name="author" value="{{ old('author', $editingBook->author ?? '') }}" required></div>
-                </div>
-                <div class="row">
-                    <div><label>ISBN</label><input type="text" name="isbn" value="{{ old('isbn', $editingBook->isbn ?? '') }}" required></div>
-                    <div><label>Genre</label><input type="text" name="genre" value="{{ old('genre', $editingBook->genre ?? '') }}" required></div>
-                </div>
-                <div class="row">
-                    <div><label>Published Year</label><input type="number" name="published_year" value="{{ old('published_year', $editingBook->published_year ?? '') }}" required></div>
-                    <div><label>Total Copies</label><input type="number" name="total_copies" min="1" value="{{ old('total_copies', $editingBook->total_copies ?? 1) }}" required></div>
-                </div>
-                <div style="margin-bottom:12px;">
-                    <label>Description</label>
-                    <textarea name="description" rows="3">{{ old('description', $editingBook->description ?? '') }}</textarea>
-                </div>
-                <div style="margin-bottom:12px;">
-                    <label>Read URL (optional)</label>
-                    <input type="url" name="read_url" placeholder="https://..." value="{{ old('read_url', $editingBook->read_url ?? '') }}">
-                </div>
-                <button type="submit">{{ $editingBook ? 'Update Book' : 'Save Book' }}</button>
-            </form>
-            @if($editingBook)
-                <p><a href="{{ route('admin.dashboard', ['section' => 'books']) }}">Cancel edit</a></p>
-            @endif
-        </div>
-
-        <div class="card">
-            <h2>Book List</h2>
-            <table>
-                <thead>
-                    <tr><th>Title</th><th>Copies</th><th>Status</th><th>Action</th></tr>
-                </thead>
-                <tbody>
-                    @forelse($books as $book)
-                        <tr>
-                            <td>{{ $book->title }}<br><span class="muted">{{ $book->author }}</span></td>
-                            <td>{{ $book->available_copies }} / {{ $book->total_copies }}</td>
-                            <td>{{ ucfirst($book->status ?? 'active') }}</td>
-                            <td>
-                                <a href="{{ route('admin.dashboard', ['section' => 'books', 'edit' => $book->id]) }}">Edit</a>
-                                <form method="POST" action="{{ route('admin.books.destroy', $book->id) }}" style="display:inline;" onsubmit="return confirm('Delete this book?')">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" style="width:auto; padding:6px 10px;">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="4">No books yet.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
+            <p class="muted">Pending unpaid fines: <strong>₱{{ number_format($stats['pending_fines'], 2) }}</strong></p>
         </div>
     @endif
 
@@ -116,8 +50,6 @@
                                     ₱{{ number_format($borrowing->fine_amount, 2) }}
                                     @if($borrowing->fine_paid)
                                         <span class="badge badge-green" style="font-size:11px;">Paid</span>
-                                    @else
-                                        <span class="badge badge-red" style="font-size:11px;">Unpaid</span>
                                     @endif
                                 @else
                                     —
@@ -134,7 +66,7 @@
                             </td>
                             <td>
                                 @if(!$borrowing->returned_at)
-                                    <form method="POST" action="{{ route('admin.borrowings.return', $borrowing->id) }}">
+                                    <form method="POST" action="{{ route('staff.borrowings.return', $borrowing->id) }}">
                                         @csrf
                                         <button type="submit" style="width:auto; padding:6px 10px;">Return</button>
                                     </form>
@@ -144,7 +76,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="7">No borrowing records yet.</td></tr>
+                        <tr><td colspan="7">No borrowing records.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -171,11 +103,11 @@
                             <td>{{ $res->created_at->format('M d, Y') }}</td>
                             <td>
                                 @if($res->status === 'pending')
-                                    <form method="POST" action="{{ route('admin.reservations.fulfill', $res->id) }}" style="display:inline;">
+                                    <form method="POST" action="{{ route('staff.reservations.fulfill', $res->id) }}" style="display:inline;">
                                         @csrf
                                         <button type="submit" style="width:auto; padding:6px 10px;">Fulfill</button>
                                     </form>
-                                    <form method="POST" action="{{ route('admin.reservations.cancel', $res->id) }}" style="display:inline;">
+                                    <form method="POST" action="{{ route('staff.reservations.cancel', $res->id) }}" style="display:inline;">
                                         @csrf
                                         <button type="submit" style="width:auto; padding:6px 10px;">Cancel</button>
                                     </form>
@@ -185,7 +117,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5">No reservations yet.</td></tr>
+                        <tr><td colspan="5">No reservations.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -194,35 +126,39 @@
 
     @if($section === 'users')
         <div class="card">
-            <h2>Users and Role Management</h2>
+            <h2>Users</h2>
             <table>
                 <thead>
-                    <tr><th>Name</th><th>Email</th><th>Current Role</th><th>Change Role</th></tr>
+                    <tr><th>Name</th><th>Email</th><th>Active Borrows</th><th>Overdue</th><th>Notify</th></tr>
                 </thead>
                 <tbody>
                     @forelse($users as $user)
+                        @php
+                            $activeBorrows = $user->borrowRecords->whereNull('returned_at');
+                            $overdueCount  = $activeBorrows->filter(fn($b) => $b->is_overdue)->count();
+                        @endphp
                         <tr>
                             <td>{{ $user->name }}</td>
                             <td>{{ $user->email }}</td>
-                            <td><span class="badge">{{ ucfirst($user->role ?? 'user') }}</span></td>
+                            <td>{{ $activeBorrows->count() }}</td>
                             <td>
-                                @if($user->id !== auth()->id())
-                                    <form method="POST" action="{{ route('admin.users.role', $user->id) }}" style="display:flex; gap:6px;">
-                                        @csrf @method('PUT')
-                                        <select name="role" style="padding:4px 6px; width:auto;">
-                                            <option value="user"  {{ $user->role === 'user'  ? 'selected' : '' }}>User</option>
-                                            <option value="staff" {{ $user->role === 'staff' ? 'selected' : '' }}>Staff</option>
-                                            <option value="admin" {{ $user->role === 'admin' ? 'selected' : '' }}>Admin</option>
-                                        </select>
-                                        <button type="submit" style="width:auto; padding:4px 10px;">Save</button>
-                                    </form>
+                                @if($overdueCount > 0)
+                                    <span class="badge badge-red">{{ $overdueCount }}</span>
                                 @else
-                                    <span class="muted">You</span>
+                                    —
                                 @endif
+                            </td>
+                            <td>
+                                <form method="POST" action="{{ route('staff.notify') }}" style="display:flex; gap:6px;">
+                                    @csrf
+                                    <input type="hidden" name="user_id" value="{{ $user->id }}">
+                                    <input type="text" name="message" placeholder="Message..." style="padding:4px 8px; font-size:13px; min-width:180px;">
+                                    <button type="submit" style="width:auto; padding:4px 10px; font-size:13px;">Send</button>
+                                </form>
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="4">No users found.</td></tr>
+                        <tr><td colspan="5">No users.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -261,17 +197,17 @@
                             <td style="font-size:13px;">{{ $sub->created_at->format('M d, Y') }}</td>
                             <td>
                                 @if($sub->isPending())
-                                    <form method="POST" action="{{ route('admin.submissions.approve', $sub->id) }}" style="display:inline;">
+                                    <form method="POST" action="{{ route('staff.submissions.approve', $sub->id) }}" style="display:inline;">
                                         @csrf
                                         <button type="submit" style="width:auto;padding:5px 10px;font-size:13px;background:#15803d;border-color:#15803d;">Approve</button>
                                     </form>
-                                    <form method="POST" action="{{ route('admin.submissions.reject', $sub->id) }}" style="display:inline;" onsubmit="return promptRejectReason(this)">
+                                    <form method="POST" action="{{ route('staff.submissions.reject', $sub->id) }}" style="display:inline;" onsubmit="return promptRejectReason(this)">
                                         @csrf
                                         <input type="hidden" name="rejection_reason" class="reject-reason-input">
                                         <button type="submit" style="width:auto;padding:5px 10px;font-size:13px;background:#dc2626;border-color:#dc2626;">Reject</button>
                                     </form>
                                 @else
-                                    <span class="muted">{{ $sub->rejection_reason ?? '' }}</span>
+                                    <span class="muted" style="font-size:13px;">{{ $sub->rejection_reason ?? '' }}</span>
                                 @endif
                             </td>
                         </tr>
