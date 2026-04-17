@@ -9,10 +9,13 @@ use App\Http\Controllers\User\DashboardController as UserDashboardController;
 use App\Http\Controllers\User\ProfileController;
 use Illuminate\Support\Facades\Route;
 
-// Public routes
+// ── Public routes ─────────────────────────────────────────────────────────────
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/catalogue', [HomeController::class, 'catalogue'])->name('books.catalogue');
 Route::get('/books/{book}', [HomeController::class, 'show'])->name('books.show');
+
+// Public user profiles
+Route::get('/users/{user}', [ProfileController::class, 'publicProfile'])->name('user.public_profile');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -25,7 +28,7 @@ Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
 
-// Admin routes
+// ── Admin routes ──────────────────────────────────────────────────────────────
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::post('/books', [AdminDashboardController::class, 'storeBook'])->name('books.store');
@@ -36,7 +39,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/reservations/{reservation}/cancel', [AdminDashboardController::class, 'cancelReservation'])->name('reservations.cancel');
 });
 
-// User routes
+// ── User routes ───────────────────────────────────────────────────────────────
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('user.dashboard');
     Route::post('/books/{book}/borrow', [UserDashboardController::class, 'borrowBook'])->name('books.borrow');
@@ -51,11 +54,14 @@ Route::middleware('auth')->group(function () {
     // Read a borrowed book
     Route::get('/books/{book}/read', [BookReadController::class, 'read'])->name('books.read');
 
-    // Reviews (ratings + comments)
+    // Reviews
     Route::post('/books/{book}/reviews', [BookReviewController::class, 'store'])->name('books.reviews.store');
     Route::delete('/books/{book}/reviews', [BookReviewController::class, 'destroy'])->name('books.reviews.destroy');
 
+    // Profile
     Route::get('/profile', [ProfileController::class, 'show'])->name('user.profile');
     Route::put('/profile', [ProfileController::class, 'updateProfile'])->name('user.profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('user.password.update');
+    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('user.avatar.update');
+    Route::delete('/profile/avatar', [ProfileController::class, 'removeAvatar'])->name('user.avatar.remove');
 });

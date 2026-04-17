@@ -92,8 +92,8 @@ class HomeController extends Controller
                                        ->where('book_id', $book->id)
                                        ->exists();
 
-            // User can read if they have an active borrow AND book has a read_url
-            $canRead = $alreadyBorrowed && !empty($book->read_url);
+      // Read Now is always available for borrowed books — Google Books API handles lookup
+$canRead = $alreadyBorrowed;
 
             // Load this user's existing review
             $userReview = BookReview::where('user_id', $userId)

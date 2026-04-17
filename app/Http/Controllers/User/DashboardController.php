@@ -23,33 +23,6 @@ class DashboardController extends Controller
             ->whereNull('returned_at')
             ->get();
 
-        $query = Book::query();
-
-        if ($search = request('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('author', 'like', "%{$search}%")
-                  ->orWhere('genre', 'like', "%{$search}%")
-                  ->orWhere('published_year', 'like', "%{$search}%");
-            });
-        }
-
-        if ($genre = request('genre')) {
-            $query->where('genre', $genre);
-        }
-
-        $sort = request('sort', 'latest');
-        match ($sort) {
-            'year_asc'   => $query->orderBy('published_year', 'asc'),
-            'year_desc'  => $query->orderBy('published_year', 'desc'),
-            'title_asc'  => $query->orderBy('title', 'asc'),
-            'title_desc' => $query->orderBy('title', 'desc'),
-            default      => $query->latest(),
-        };
-
-        $books  = $query->get();
-        $genres = Book::select('genre')->distinct()->orderBy('genre')->pluck('genre');
-
         $borrowingHistory = BorrowRecord::with('book')
             ->where('user_id', $user->id)
             ->whereNotNull('returned_at')
@@ -73,7 +46,7 @@ class DashboardController extends Controller
             ->sum('fine_amount');
 
         return view('user.dashboard', compact(
-            'stats', 'books', 'genres', 'currentBorrowings',
+            'stats', 'currentBorrowings',
             'borrowingHistory', 'reservations', 'totalFines'
         ));
     }

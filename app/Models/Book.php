@@ -19,6 +19,7 @@ class Book extends Model
         'available_copies',
         'description',
         'read_url',
+        'google_books_id',
     ];
 
     protected $casts = [

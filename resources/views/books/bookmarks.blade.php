@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="card">
-        <h1>🔖 My Bookmarks</h1>
+        <h1>My Bookmarks</h1>
         <p class="muted">Books you have saved for later.</p>
     </div>
 

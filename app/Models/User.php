@@ -16,6 +16,8 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'avatar',
+        'bio',
     ];
 
     protected $hidden = [
@@ -27,7 +29,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'password'          => 'hashed',
         ];
     }
 
@@ -36,8 +38,25 @@ class User extends Authenticatable
         return $this->hasMany(BorrowRecord::class);
     }
 
+    public function bookmarks()
+    {
+        return $this->hasMany(Bookmark::class);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+    /**
+     * Returns the URL for the user's avatar, or a default placeholder.
+     */
+    public function avatarUrl(): string
+    {
+        if ($this->avatar && file_exists(storage_path('app/public/' . $this->avatar))) {
+            return asset('storage/' . $this->avatar);
+        }
+        // Default: use a simple initials-based placeholder via UI Avatars
+        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&background=111827&color=fff&size=128';
     }
 }

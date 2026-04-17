@@ -1,14 +1,49 @@
 @extends('layouts.app')
 
-@section('title', 'Profile')
+@section('title', 'My Profile')
 
 @section('content')
     <div class="card">
-        <h1>Profile</h1>
-        <p class="muted">Update your account details and password.</p>
+        <h1>My Profile</h1>
+        <p class="muted">Member since {{ $user->created_at->format('F d, Y') }}</p>
     </div>
 
+    {{-- Avatar + Bio row --}}
     <div class="grid grid-2">
+        {{-- Avatar upload --}}
+        <div class="card">
+            <h2>Profile Picture</h2>
+
+            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
+                <img src="{{ $user->avatarUrl() }}" alt="avatar"
+                     style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 2px solid #e5e7eb;">
+                <div>
+                    <div style="font-weight: bold; font-size: 16px;">{{ $user->name }}</div>
+                    <div class="muted" style="font-size: 13px;">{{ ucfirst($user->role) }}</div>
+                    <div class="muted" style="font-size: 13px;">Joined {{ $user->created_at->format('M Y') }}</div>
+                </div>
+            </div>
+
+            <form method="POST" action="{{ route('user.avatar.update') }}" enctype="multipart/form-data">
+                @csrf
+                <div style="margin-bottom: 12px;">
+                    <label>Upload New Picture (JPG, PNG, GIF, WEBP — max 2MB)</label>
+                    <input type="file" name="avatar" accept="image/*" required>
+                    @error('avatar')<div style="color:#b91c1c; font-size:13px; margin-top:4px;">{{ $message }}</div>@enderror
+                </div>
+                <button type="submit" style="margin-bottom: 8px;">Upload Picture</button>
+            </form>
+
+            @if($user->avatar)
+                <form method="POST" action="{{ route('user.avatar.remove') }}">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" style="background: #dc2626; border-color: #dc2626;">Remove Picture</button>
+                </form>
+            @endif
+        </div>
+
+        {{-- Bio + name/email --}}
         <div class="card">
             <h2>Update Profile</h2>
             <form method="POST" action="{{ route('user.profile.update') }}">
@@ -17,41 +52,57 @@
                 <div style="margin-bottom: 12px;">
                     <label>Name</label>
                     <input type="text" name="name" value="{{ old('name', $user->name) }}" required>
-                    @error('name')<div style="color:#b91c1c;">{{ $message }}</div>@enderror
+                    @error('name')<div style="color:#b91c1c; font-size:13px;">{{ $message }}</div>@enderror
                 </div>
                 <div style="margin-bottom: 12px;">
                     <label>Email</label>
                     <input type="email" name="email" value="{{ old('email', $user->email) }}" required>
-                    @error('email')<div style="color:#b91c1c;">{{ $message }}</div>@enderror
+                    @error('email')<div style="color:#b91c1c; font-size:13px;">{{ $message }}</div>@enderror
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label>Bio <span class="muted" style="font-size:12px;">(max 500 characters)</span></label>
+                    <textarea name="bio" rows="4" maxlength="500" placeholder="Tell others a little about yourself…">{{ old('bio', $user->bio) }}</textarea>
+                    @error('bio')<div style="color:#b91c1c; font-size:13px;">{{ $message }}</div>@enderror
                 </div>
                 <button type="submit">Save Profile</button>
             </form>
         </div>
-
-        <div class="card">
-            <h2>Change Password</h2>
-            <form method="POST" action="{{ route('user.password.update') }}">
-                @csrf
-                @method('PUT')
-                <div style="margin-bottom: 12px;">
-                    <label>Current Password</label>
-                    <input type="password" name="current_password" required>
-                    @error('current_password')<div style="color:#b91c1c;">{{ $message }}</div>@enderror
-                </div>
-                <div style="margin-bottom: 12px;">
-                    <label>New Password</label>
-                    <input type="password" name="password" required>
-                    @error('password')<div style="color:#b91c1c;">{{ $message }}</div>@enderror
-                </div>
-                <div style="margin-bottom: 12px;">
-                    <label>Confirm New Password</label>
-                    <input type="password" name="password_confirmation" required>
-                </div>
-                <button type="submit">Change Password</button>
-            </form>
-        </div>
     </div>
 
+    {{-- Change password --}}
+    <div class="card">
+        <h2>Change Password</h2>
+        <form method="POST" action="{{ route('user.password.update') }}" style="max-width: 400px;">
+            @csrf
+            @method('PUT')
+            <div style="margin-bottom: 12px;">
+                <label>Current Password</label>
+                <input type="password" name="current_password" required>
+                @error('current_password')<div style="color:#b91c1c; font-size:13px;">{{ $message }}</div>@enderror
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label>New Password</label>
+                <input type="password" name="password" required>
+                @error('password')<div style="color:#b91c1c; font-size:13px;">{{ $message }}</div>@enderror
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label>Confirm New Password</label>
+                <input type="password" name="password_confirmation" required>
+            </div>
+            <button type="submit">Change Password</button>
+        </form>
+    </div>
+
+    {{-- Public profile link --}}
+    <div class="card">
+        <h2>Public Profile</h2>
+        <p class="muted">Others can view your public profile at the link below.</p>
+        <a href="{{ route('user.public_profile', $user->id) }}" target="_blank">
+            View my public profile &nearr;
+        </a>
+    </div>
+
+    {{-- Borrow history --}}
     <div class="card">
         <h2>Borrow History</h2>
         <table>

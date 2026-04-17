@@ -11,8 +11,8 @@
         a:hover { text-decoration: underline; }
         .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
         .nav { background: #111827; color: white; position: relative; z-index: 100; }
-        .nav .container { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-top: 12px; padding-bottom: 12px; }
-        .nav a { color: white; margin-left: 12px; }
+        .nav .container { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-top: 10px; padding-bottom: 10px; }
+        .nav a { color: white; margin-left: 10px; font-size: 14px; }
         .nav a:hover { text-decoration: underline; }
         .card { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
         .grid { display: grid; gap: 16px; }
@@ -29,101 +29,72 @@
         th, td { padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: top; }
         .flash { padding: 12px 14px; margin-bottom: 16px; border-radius: 6px; }
         .success { background: #dcfce7; }
-        .error { background: #fee2e2; }
-        .muted { color: #6b7280; }
-        .badge { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; background: #e5e7eb; }
+        .error   { background: #fee2e2; }
+        .muted   { color: #6b7280; }
+        .badge   { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; background: #e5e7eb; }
         .badge-green { background: #dcfce7; }
         .badge-red   { background: #fee2e2; }
 
-        /* ── Burger menu ─────────────────────────────────────── */
+        /* Avatar circle */
+        .avatar-sm {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(255,255,255,.4);
+            vertical-align: middle;
+            margin-left: 8px;
+        }
+
+        /* ── Burger / Drawer ─────────────────────────── */
         .burger-btn {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 22px;
-            cursor: pointer;
-            padding: 4px 8px;
-            width: auto;
-            line-height: 1;
+            background: none; border: none; color: white;
+            font-size: 22px; cursor: pointer;
+            padding: 4px 8px; width: auto; line-height: 1;
         }
         .burger-btn:hover { opacity: .8; }
 
         .side-drawer {
-            position: fixed;
-            top: 0; left: -320px;
-            width: 300px;
-            height: 100%;
-            background: white;
-            border-right: 1px solid #ddd;
-            z-index: 999;
-            overflow-y: auto;
+            position: fixed; top: 0; left: -320px;
+            width: 300px; height: 100%;
+            background: white; border-right: 1px solid #ddd;
+            z-index: 999; overflow-y: auto;
             transition: left 0.25s ease;
             box-shadow: 2px 0 8px rgba(0,0,0,.15);
         }
         .side-drawer.open { left: 0; }
 
         .drawer-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,.4);
-            z-index: 998;
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,.4); z-index: 998;
         }
         .drawer-overlay.open { display: block; }
 
         .drawer-header {
-            background: #111827;
-            color: white;
+            background: #111827; color: white;
             padding: 14px 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            display: flex; justify-content: space-between; align-items: center;
         }
-        .drawer-header strong { font-size: 16px; }
         .drawer-close {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 20px;
-            cursor: pointer;
-            width: auto;
-            padding: 2px 6px;
-            line-height: 1;
+            background: none; border: none; color: white;
+            font-size: 20px; cursor: pointer; width: auto;
+            padding: 2px 6px; line-height: 1;
         }
-
         .drawer-section-title {
-            font-weight: bold;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: .05em;
-            padding: 14px 16px 6px;
-            color: #6b7280;
+            font-weight: bold; font-size: 13px;
+            text-transform: uppercase; letter-spacing: .05em;
+            padding: 14px 16px 6px; color: #6b7280;
             border-bottom: 1px solid #e5e7eb;
         }
-
         .drawer-link {
-            display: block;
-            padding: 12px 16px;
-            color: #111827;
-            border-bottom: 1px solid #f3f4f6;
-            text-decoration: none;
-            font-size: 15px;
+            display: block; padding: 12px 16px;
+            color: #111827; border-bottom: 1px solid #f3f4f6;
+            text-decoration: none; font-size: 15px;
         }
         .drawer-link:hover { background: #f9fafb; text-decoration: none; }
-
-        .drawer-auth {
-            display: flex;
-            gap: 8px;
-            padding: 14px 16px;
-            border-bottom: 1px solid #e5e7eb;
-        }
+        .drawer-auth { display: flex; gap: 8px; padding: 14px 16px; border-bottom: 1px solid #e5e7eb; }
         .drawer-auth a {
-            flex: 1;
-            text-align: center;
-            padding: 10px;
-            border-radius: 6px;
-            font-size: 14px;
-            text-decoration: none;
+            flex: 1; text-align: center; padding: 10px;
+            border-radius: 6px; font-size: 14px; text-decoration: none;
         }
         .drawer-auth .btn-login  { border: 1px solid #111827; color: #111827; }
         .drawer-auth .btn-signup { background: #111827; color: white; }
@@ -147,26 +118,29 @@
     @endguest
 
     @auth
-    <div style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; font-size: 14px; color: #374151;">
-        Signed in as <strong>{{ auth()->user()->name }}</strong>
+    <div style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 12px;">
+        <img src="{{ auth()->user()->avatarUrl() }}" alt="avatar"
+             style="width:44px; height:44px; border-radius:50%; object-fit:cover; border:2px solid #e5e7eb;">
+        <div>
+            <div style="font-weight:bold; font-size:14px;">{{ auth()->user()->name }}</div>
+            <div style="font-size:12px; color:#6b7280;">{{ ucfirst(auth()->user()->role) }}</div>
+        </div>
     </div>
 
-    {{-- MY LIBRARY first --}}
     <div class="drawer-section-title">My Library</div>
     <a href="{{ auth()->user()->role === 'admin' ? route('admin.dashboard') : route('user.dashboard') }}" class="drawer-link">Dashboard</a>
     @if(auth()->user()->role === 'user')
     <a href="{{ route('books.bookmarks') }}" class="drawer-link">Bookmarks</a>
     @endif
-    <a href="{{ route('user.profile') }}" class="drawer-link">Profile</a>
-    <form action="{{ route('logout') }}" method="POST" style="margin: 0;">
+    <a href="{{ route('user.profile') }}" class="drawer-link">My Profile</a>
+    <form action="{{ route('logout') }}" method="POST" style="margin:0;">
         @csrf
-        <button type="submit" style="width: 100%; text-align: left; background: none; color: #dc2626; border: none; border-top: 1px solid #f3f4f6; border-radius: 0; padding: 12px 16px; font-size: 15px; cursor: pointer;">
+        <button type="submit" style="width:100%; text-align:left; background:none; color:#dc2626; border:none; border-top:1px solid #f3f4f6; border-radius:0; padding:12px 16px; font-size:15px; cursor:pointer;">
             Logout
         </button>
     </form>
     @endauth
 
-    {{-- BROWSE second --}}
     <div class="drawer-section-title">Browse</div>
     <a href="{{ route('home') }}" class="drawer-link">Home</a>
     <a href="{{ route('books.catalogue') }}" class="drawer-link">Catalogue</a>
@@ -183,11 +157,11 @@
 {{-- Top Nav --}}
 <div class="nav">
     <div class="container">
-        <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="display:flex; align-items:center; gap:10px;">
             <button class="burger-btn" onclick="openDrawer()" title="Menu">&#9776;</button>
-            <strong><a href="{{ route('home') }}" style="color:white; text-decoration:none;">Library System</a></strong>
+            <strong><a href="{{ route('home') }}" style="color:white; text-decoration:none; font-size:15px;">Library System</a></strong>
         </div>
-        <div style="display: flex; align-items: center; gap: 4px;">
+        <div style="display:flex; align-items:center; flex-wrap:wrap;">
             <a href="{{ route('home') }}">Home</a>
             <a href="{{ route('books.catalogue') }}">Catalogue</a>
             @auth
@@ -195,7 +169,11 @@
                 @if(auth()->user()->role === 'user')
                     <a href="{{ route('books.bookmarks') }}">Bookmarks</a>
                 @endif
-                <form action="{{ route('logout') }}" method="POST" style="display:inline; margin-left: 8px;">
+                <a href="{{ route('user.profile') }}" style="display:inline-flex; align-items:center; gap:4px;">
+                    <img src="{{ auth()->user()->avatarUrl() }}" alt="avatar" class="avatar-sm">
+                    Profile
+                </a>
+                <form action="{{ route('logout') }}" method="POST" style="display:inline; margin-left:8px;">
                     @csrf
                     <button type="submit" style="width:auto; padding:6px 12px;">Logout</button>
                 </form>
@@ -227,12 +205,10 @@
     function openDrawer()  { document.getElementById('sideDrawer').classList.add('open'); document.getElementById('drawerOverlay').classList.add('open'); }
     function closeDrawer() { document.getElementById('sideDrawer').classList.remove('open'); document.getElementById('drawerOverlay').classList.remove('open'); }
 
-    // Auto-submit filter forms when any select/input changes
     document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('form[data-autofilter] select').forEach(function (el) {
             el.addEventListener('change', function () { this.closest('form').submit(); });
         });
-        // For search inputs, submit on Enter is native; no extra handling needed
     });
 </script>
 </body>
