@@ -35,17 +35,14 @@
         .badge-green { background: #dcfce7; }
         .badge-red   { background: #fee2e2; }
 
-        /* Avatar circle */
         .avatar-sm {
             width: 32px; height: 32px;
             border-radius: 50%;
             object-fit: cover;
             border: 2px solid rgba(255,255,255,.4);
             vertical-align: middle;
-            margin-left: 8px;
         }
 
-        /* ── Burger / Drawer ─────────────────────────── */
         .burger-btn {
             background: none; border: none; color: white;
             font-size: 22px; cursor: pointer;
@@ -98,11 +95,35 @@
         }
         .drawer-auth .btn-login  { border: 1px solid #111827; color: #111827; }
         .drawer-auth .btn-signup { background: #111827; color: white; }
+
+        .nav-links { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .search-form { display: flex; align-items: center; gap: 8px; min-width: 260px; max-width: 360px; width: 100%; }
+        .search-form input { width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid #374151; background: #fff; }
+        .search-form button { width: auto; padding: 8px 12px; background: #374151; border-color: #374151; }
+
+        .profile-menu { position: relative; }
+        .profile-toggle {
+            width: auto; padding: 6px 10px; background: transparent; border: 1px solid rgba(255,255,255,.18);
+            display: inline-flex; align-items: center; gap: 8px;
+        }
+        .profile-toggle:hover { opacity: 1; background: rgba(255,255,255,.06); }
+        .profile-menu-panel {
+            display: none; position: absolute; right: 0; top: calc(100% + 8px);
+            min-width: 220px; background: white; border: 1px solid #e5e7eb; border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,.14); overflow: hidden; z-index: 200;
+        }
+        .profile-menu-panel.open { display: block; }
+        .profile-menu-panel a, .profile-menu-panel button {
+            display: block; width: 100%; text-align: left; padding: 10px 14px; margin: 0;
+            border: 0; background: white; color: #111827; border-radius: 0;
+        }
+        .profile-menu-panel a:hover, .profile-menu-panel button:hover { background: #f9fafb; text-decoration: none; }
+        .profile-menu-panel .danger { color: #dc2626; }
+        .profile-menu-name { color: white; font-size: 14px; }
     </style>
 </head>
 <body>
 
-{{-- Side Drawer --}}
 <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
 <div class="side-drawer" id="sideDrawer">
     <div class="drawer-header">
@@ -130,7 +151,8 @@
     <div class="drawer-section-title">My Library</div>
     <a href="{{ auth()->user()->role === 'admin' ? route('admin.dashboard') : route('user.dashboard') }}" class="drawer-link">Dashboard</a>
     @if(auth()->user()->role === 'user')
-    <a href="{{ route('books.bookmarks') }}" class="drawer-link">Bookmarks</a>
+        <a href="{{ route('books.bookmarks') }}" class="drawer-link">Bookmarks</a>
+        <a href="{{ route('user.ratings') }}" class="drawer-link">Ratings</a>
     @endif
     <a href="{{ route('user.profile') }}" class="drawer-link">My Profile</a>
     <form action="{{ route('logout') }}" method="POST" style="margin:0;">
@@ -154,29 +176,44 @@
     @endforeach
 </div>
 
-{{-- Top Nav --}}
 <div class="nav">
     <div class="container">
-        <div style="display:flex; align-items:center; gap:10px;">
+        <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
             <button class="burger-btn" onclick="openDrawer()" title="Menu">&#9776;</button>
             <strong><a href="{{ route('home') }}" style="color:white; text-decoration:none; font-size:15px;">Library System</a></strong>
         </div>
-        <div style="display:flex; align-items:center; flex-wrap:wrap;">
+
+        <form class="search-form" method="GET" action="{{ route('search') }}">
+            <input type="search" name="q" value="{{ request('q') }}" placeholder="Search books or users">
+            <button type="submit">Search</button>
+        </form>
+
+        <div class="nav-links">
             <a href="{{ route('home') }}">Home</a>
             <a href="{{ route('books.catalogue') }}">Catalogue</a>
             @auth
                 <a href="{{ auth()->user()->role === 'admin' ? route('admin.dashboard') : route('user.dashboard') }}">Dashboard</a>
                 @if(auth()->user()->role === 'user')
                     <a href="{{ route('books.bookmarks') }}">Bookmarks</a>
+                    <a href="{{ route('user.ratings') }}">Ratings</a>
                 @endif
-                <a href="{{ route('user.profile') }}" style="display:inline-flex; align-items:center; gap:4px;">
-                    <img src="{{ auth()->user()->avatarUrl() }}" alt="avatar" class="avatar-sm">
-                    Profile
-                </a>
-                <form action="{{ route('logout') }}" method="POST" style="display:inline; margin-left:8px;">
-                    @csrf
-                    <button type="submit" style="width:auto; padding:6px 12px;">Logout</button>
-                </form>
+                <div class="profile-menu" id="profileMenuWrap">
+                    <button type="button" class="profile-toggle" onclick="toggleProfileMenu(event)">
+                        <img src="{{ auth()->user()->avatarUrl() }}" alt="avatar" class="avatar-sm">
+                        <span class="profile-menu-name">{{ auth()->user()->name }}</span>
+                    </button>
+                    <div class="profile-menu-panel" id="profileMenuPanel">
+                        <a href="{{ route('user.profile') }}">My Profile</a>
+                        @if(auth()->user()->role === 'user')
+                            <a href="{{ route('user.ratings') }}">Ratings</a>
+                            <a href="{{ route('books.bookmarks') }}">Bookmarks</a>
+                        @endif
+                        <form action="{{ route('logout') }}" method="POST" style="margin:0;">
+                            @csrf
+                            <button type="submit" class="danger">Logout</button>
+                        </form>
+                    </div>
+                </div>
             @else
                 <a href="{{ route('login') }}">Login</a>
                 <a href="{{ route('register') }}">Register</a>
@@ -202,8 +239,29 @@
 @stack('scripts')
 
 <script>
-    function openDrawer()  { document.getElementById('sideDrawer').classList.add('open'); document.getElementById('drawerOverlay').classList.add('open'); }
-    function closeDrawer() { document.getElementById('sideDrawer').classList.remove('open'); document.getElementById('drawerOverlay').classList.remove('open'); }
+    function openDrawer() {
+        document.getElementById('sideDrawer').classList.add('open');
+        document.getElementById('drawerOverlay').classList.add('open');
+    }
+
+    function closeDrawer() {
+        document.getElementById('sideDrawer').classList.remove('open');
+        document.getElementById('drawerOverlay').classList.remove('open');
+    }
+
+    function toggleProfileMenu(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        document.getElementById('profileMenuPanel').classList.toggle('open');
+    }
+
+    document.addEventListener('click', function (event) {
+        var panel = document.getElementById('profileMenuPanel');
+        var wrap = document.getElementById('profileMenuWrap');
+        if (panel && wrap && !wrap.contains(event.target)) {
+            panel.classList.remove('open');
+        }
+    });
 
     document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('form[data-autofilter] select').forEach(function (el) {

@@ -6,17 +6,14 @@
     <div class="card">
         <h1>My Profile</h1>
         <p class="muted">Member since {{ $user->created_at->format('F d, Y') }}</p>
+        <p><a href="{{ route('user.public_profile', $user->id) }}">View public profile</a> &nbsp;&bull;&nbsp; <a href="{{ route('user.ratings') }}">View my ratings</a></p>
     </div>
 
-    {{-- Avatar + Bio row --}}
     <div class="grid grid-2">
-        {{-- Avatar upload --}}
         <div class="card">
             <h2>Profile Picture</h2>
-
             <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
-                <img src="{{ $user->avatarUrl() }}" alt="avatar"
-                     style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 2px solid #e5e7eb;">
+                <img src="{{ $user->avatarUrl() }}" alt="avatar" style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 2px solid #e5e7eb;">
                 <div>
                     <div style="font-weight: bold; font-size: 16px;">{{ $user->name }}</div>
                     <div class="muted" style="font-size: 13px;">{{ ucfirst($user->role) }}</div>
@@ -43,7 +40,6 @@
             @endif
         </div>
 
-        {{-- Bio + name/email --}}
         <div class="card">
             <h2>Update Profile</h2>
             <form method="POST" action="{{ route('user.profile.update') }}">
@@ -69,7 +65,6 @@
         </div>
     </div>
 
-    {{-- Change password --}}
     <div class="card">
         <h2>Change Password</h2>
         <form method="POST" action="{{ route('user.password.update') }}" style="max-width: 400px;">
@@ -93,16 +88,40 @@
         </form>
     </div>
 
-    {{-- Public profile link --}}
     <div class="card">
         <h2>Public Profile</h2>
         <p class="muted">Others can view your public profile at the link below.</p>
-        <a href="{{ route('user.public_profile', $user->id) }}" target="_blank">
-            View my public profile &nearr;
-        </a>
+        <a href="{{ route('user.public_profile', $user->id) }}" target="_blank">View my public profile &nearr;</a>
     </div>
 
-    {{-- Borrow history --}}
+    <div class="card">
+        <h2>My Ratings</h2>
+        @if($ratings->isEmpty())
+            <p class="muted">You have not rated any books yet.</p>
+        @else
+            <table>
+                <thead>
+                    <tr>
+                        <th>Book</th>
+                        <th>Rating</th>
+                        <th>Comment</th>
+                        <th>When</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($ratings as $rating)
+                        <tr>
+                            <td><a href="{{ route('books.show', ['book' => $rating->book_id, 'back' => request()->fullUrl()]) }}">{{ $rating->book->title ?? 'Deleted Book' }}</a></td>
+                            <td>{{ $rating->rating }}/5</td>
+                            <td>{{ $rating->comment ?: '—' }}</td>
+                            <td>{{ $rating->created_at->format('M d, Y') }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
+    </div>
+
     <div class="card">
         <h2>Borrow History</h2>
         <table>

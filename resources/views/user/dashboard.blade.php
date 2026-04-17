@@ -28,7 +28,7 @@
                 @forelse($currentBorrowings as $borrowing)
                     @php $currentFine = $borrowing->calculateFine(); @endphp
                     <tr>
-                        <td><a href="{{ route('books.show', $borrowing->book_id) }}">{{ $borrowing->book->title ?? 'Deleted Book' }}</a></td>
+                        <td><a href="{{ route('books.show', ['book' => $borrowing->book_id, 'back' => request()->fullUrl()]) }}">{{ $borrowing->book->title ?? 'Deleted Book' }}</a></td>
                         <td>{{ $borrowing->due_date?->format('M d, Y') }}</td>
                         <td>{{ $currentFine > 0 ? '₱'.number_format($currentFine, 2) : '—' }}</td>
                         <td>
@@ -40,7 +40,7 @@
                         </td>
                         <td style="display: flex; gap: 6px; flex-wrap: wrap;">
                             {{-- Read Now button — always shown for active borrows --}}
-                            <a href="{{ route('books.read', $borrowing->book_id) }}"
+                            <a href="{{ route('books.read', ['book' => $borrowing->book_id, 'back' => request()->fullUrl()]) }}"
                                style="padding: 6px 10px; background: #15803d; color: white; border-radius: 6px; font-size: 13px; text-decoration: none; white-space: nowrap;">
                                 Read Now
                             </a>
@@ -67,7 +67,7 @@
             <tbody>
                 @foreach($reservations as $res)
                     <tr>
-                        <td><a href="{{ route('books.show', $res->book_id) }}">{{ $res->book->title ?? 'Deleted' }}</a></td>
+                        <td><a href="{{ route('books.show', ['book' => $res->book_id, 'back' => request()->fullUrl()]) }}">{{ $res->book->title ?? 'Deleted' }}</a></td>
                         <td>{{ $res->created_at->format('M d, Y') }}</td>
                         <td>
                             <form method="POST" action="{{ route('user.reservations.cancel', $res->id) }}">
@@ -91,7 +91,7 @@
             <tbody>
                 @forelse($borrowingHistory as $record)
                     <tr>
-                        <td><a href="{{ route('books.show', $record->book_id) }}">{{ $record->book->title ?? 'Deleted Book' }}</a></td>
+                        <td><a href="{{ route('books.show', ['book' => $record->book_id, 'back' => request()->fullUrl()]) }}">{{ $record->book->title ?? 'Deleted Book' }}</a></td>
                         <td>{{ $record->borrowed_at?->format('M d, Y') }}</td>
                         <td>{{ $record->returned_at?->format('M d, Y') ?? '—' }}</td>
                         <td>{{ $record->fine_amount > 0 ? '₱'.number_format($record->fine_amount, 2) : '—' }}</td>

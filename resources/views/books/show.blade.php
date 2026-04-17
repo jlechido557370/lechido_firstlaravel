@@ -3,9 +3,14 @@
 @section('title', $book->title)
 
 @section('content')
+    @php
+        $backUrl = request('back') ?: route('home');
+        $currentUrl = request()->fullUrl();
+    @endphp
+
     <div class="card">
         <p style="margin-bottom: 8px;">
-            <a href="javascript:history.back()">&larr; Back</a>
+            <a href="{{ $backUrl }}">&larr; Back</a>
             &nbsp;&bull;&nbsp;
             <a href="{{ route('home') }}">Home</a>
             &nbsp;&bull;&nbsp;
@@ -31,21 +36,19 @@
             </div>
 
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                {{-- Bookmark button --}}
                 @auth
                     @if(auth()->user()->role === 'user')
-                    <form method="POST" action="{{ route('books.bookmark', $book->id) }}" style="margin: 0;">
-                        @csrf
-                        <button type="submit" style="width: auto; padding: 8px 16px; background: {{ $isBookmarked ? '#374151' : '#111827' }};">
-                            {{ $isBookmarked ? 'Bookmarked' : 'Bookmark' }}
-                        </button>
-                    </form>
+                        <form method="POST" action="{{ route('books.bookmark', $book->id) }}" style="margin: 0;">
+                            @csrf
+                            <button type="submit" style="width: auto; padding: 8px 16px; background: {{ $isBookmarked ? '#374151' : '#111827' }};">
+                                {{ $isBookmarked ? 'Bookmarked' : 'Bookmark' }}
+                            </button>
+                        </form>
                     @endif
                 @endauth
 
-                {{-- Read Book button --}}
                 @if($canRead)
-                    <a href="{{ route('books.read', $book->id) }}"
+                    <a href="{{ route('books.read', ['book' => $book->id, 'back' => $currentUrl]) }}"
                        style="display: inline-block; padding: 8px 16px; background: #15803d; color: white; border-radius: 6px; text-decoration: none; font-size: 14px;">
                         Read Book Online
                     </a>
@@ -76,7 +79,6 @@
             <p style="line-height: 1.7; margin-bottom: 20px;">{{ $book->description }}</p>
         @endif
 
-        {{-- Borrow / Reserve actions --}}
         @auth
             @if(auth()->user()->role === 'user')
                 @if($alreadyBorrowed)
@@ -105,91 +107,86 @@
         @endauth
     </div>
 
-    {{-- ── Ratings & Reviews (visible only to logged-in users) ── --}}
     @auth
-    <div class="card">
-        <h2 style="margin-bottom: 16px;">Ratings &amp; Reviews</h2>
+        <div class="card">
+            <h2 style="margin-bottom: 16px;">Ratings &amp; Reviews</h2>
 
-        {{-- Submit / Edit your review --}}
-        @if(auth()->user()->role === 'user')
-        <div style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #e5e7eb;">
-            <h3 style="margin-bottom: 10px; font-size: 15px;">{{ $userReview ? 'Edit Your Review' : 'Leave a Review' }}</h3>
-            <form method="POST" action="{{ route('books.reviews.store', $book->id) }}">
-                @csrf
-                <div style="margin-bottom: 12px;">
-                    <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px;">Your Rating</label>
-                    <div id="star-rating" style="display: flex; gap: 6px;">
-                        @for($i = 1; $i <= 5; $i++)
-                            <label style="cursor: pointer; font-size: 28px; color: {{ ($userReview && $userReview->rating >= $i) ? '#f59e0b' : '#d1d5db' }};"
-                                   id="star-label-{{ $i }}"
-                                   onmouseover="hoverStars({{ $i }})"
-                                   onmouseout="resetStars()">
-                                <input type="radio" name="rating" value="{{ $i }}"
-                                       {{ ($userReview && $userReview->rating == $i) ? 'checked' : '' }}
-                                       style="display: none;"
-                                       onchange="selectStar({{ $i }})">
-                                &#9733;
-                            </label>
-                        @endfor
-                    </div>
-                    @error('rating') <p style="color: #dc2626; font-size: 13px; margin-top: 4px;">{{ $message }}</p> @enderror
-                </div>
-                <div style="margin-bottom: 12px;">
-                    <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px;">Comment <span class="muted" style="font-weight: 400;">(optional)</span></label>
-                    <textarea name="comment" rows="3" placeholder="Share your thoughts about this book..." style="resize: vertical;">{{ old('comment', $userReview?->comment) }}</textarea>
-                    @error('comment') <p style="color: #dc2626; font-size: 13px; margin-top: 4px;">{{ $message }}</p> @enderror
-                </div>
-                <div style="display: flex; gap: 8px;">
-                    <button type="submit" style="width: auto; padding: 8px 20px;">
-                        {{ $userReview ? 'Update Review' : 'Submit Review' }}
-                    </button>
-                    @if($userReview)
-                    <form method="POST" action="{{ route('books.reviews.destroy', $book->id) }}" style="margin: 0;">
+            @if(auth()->user()->role === 'user')
+                <div style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #e5e7eb;">
+                    <h3 style="margin-bottom: 10px; font-size: 15px;">{{ $userReview ? 'Edit Your Review' : 'Leave a Review' }}</h3>
+                    <form method="POST" action="{{ route('books.reviews.store', $book->id) }}">
                         @csrf
-                        @method('DELETE')
-                        <button type="submit" style="width: auto; padding: 8px 20px; background: #dc2626;"
-                                onclick="return confirm('Remove your review?')">
-                            Remove Review
-                        </button>
-                    </form>
-                    @endif
-                </div>
-            </form>
-        </div>
-        @endif
-
-        {{-- All Reviews --}}
-        @if($reviews->isEmpty())
-            <p class="muted">No reviews yet. Be the first to leave one!</p>
-        @else
-            <div>
-                @foreach($reviews as $review)
-                <div style="padding: 14px 0; border-bottom: 1px solid #f3f4f6;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <strong style="font-size: 14px;">{{ $review->user->name ?? 'Unknown' }}</strong>
-                            <span style="color: #f59e0b; font-size: 18px; letter-spacing: -1px;">
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px;">Your Rating</label>
+                            <div id="star-rating" style="display: flex; gap: 6px;">
                                 @for($i = 1; $i <= 5; $i++)
-                                    <span style="color: {{ $review->rating >= $i ? '#f59e0b' : '#d1d5db' }};">&#9733;</span>
+                                    <label style="cursor: pointer; font-size: 28px; color: {{ ($userReview && $userReview->rating >= $i) ? '#f59e0b' : '#d1d5db' }};"
+                                           id="star-label-{{ $i }}"
+                                           onmouseover="hoverStars({{ $i }})"
+                                           onmouseout="resetStars()">
+                                        <input type="radio" name="rating" value="{{ $i }}"
+                                               {{ ($userReview && $userReview->rating == $i) ? 'checked' : '' }}
+                                               style="display: none;"
+                                               onchange="selectStar({{ $i }})">
+                                        &#9733;
+                                    </label>
                                 @endfor
-                            </span>
-                            <span class="muted" style="font-size: 12px;">{{ $review->rating }}/5</span>
+                            </div>
+                            @error('rating') <p style="color: #dc2626; font-size: 13px; margin-top: 4px;">{{ $message }}</p> @enderror
                         </div>
-                        <span class="muted" style="font-size: 12px;">{{ $review->created_at->format('M d, Y') }}</span>
-                    </div>
-                    @if($review->comment)
-                        <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #374151;">{{ $review->comment }}</p>
-                    @else
-                        <p class="muted" style="font-size: 13px; margin: 0;">No comment left.</p>
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px;">Comment <span class="muted" style="font-weight: 400;">(optional)</span></label>
+                            <textarea name="comment" rows="3" placeholder="Share your thoughts about this book..." style="resize: vertical;">{{ old('comment', $userReview?->comment) }}</textarea>
+                            @error('comment') <p style="color: #dc2626; font-size: 13px; margin-top: 4px;">{{ $message }}</p> @enderror
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                            <button type="submit" style="width: auto; padding: 8px 20px;">
+                                {{ $userReview ? 'Update Review' : 'Submit Review' }}
+                            </button>
+                        </div>
+                    </form>
+                    @if($userReview)
+                        <form method="POST" action="{{ route('books.reviews.destroy', $book->id) }}" style="margin-top: 8px;">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" style="width: auto; padding: 8px 20px; background: #dc2626;" onclick="return confirm('Remove your review?')">
+                                Remove Review
+                            </button>
+                        </form>
                     @endif
                 </div>
-                @endforeach
-            </div>
-        @endif
-    </div>
+            @endif
+
+            @if($reviews->isEmpty())
+                <p class="muted">No reviews yet. Be the first to leave one!</p>
+            @else
+                <div>
+                    @foreach($reviews as $review)
+                        <div style="padding: 14px 0; border-bottom: 1px solid #f3f4f6;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; gap: 12px; flex-wrap: wrap;">
+                                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                    <a href="{{ route('user.public_profile', $review->user_id) }}" style="font-size: 14px; font-weight: 700;">{{ $review->user->name ?? 'Unknown' }}</a>
+                                    <span style="color: #f59e0b; font-size: 18px; letter-spacing: -1px;">
+                                        @for($i = 1; $i <= 5; $i++)
+                                            <span style="color: {{ $review->rating >= $i ? '#f59e0b' : '#d1d5db' }};">&#9733;</span>
+                                        @endfor
+                                    </span>
+                                    <span class="muted" style="font-size: 12px;">{{ $review->rating }}/5</span>
+                                </div>
+                                <span class="muted" style="font-size: 12px;">{{ $review->created_at->format('M d, Y') }}</span>
+                            </div>
+                            @if($review->comment)
+                                <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #374151;">{{ $review->comment }}</p>
+                            @else
+                                <p class="muted" style="font-size: 13px; margin: 0;">No comment left.</p>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
     @endauth
 
-    {{-- Edit History --}}
     <div class="card">
         <h2>Edit History</h2>
         @if($editHistory->isEmpty())
@@ -222,16 +219,13 @@
         @endif
     </div>
 
-    {{-- Related books --}}
     @if($related->count() > 0)
         <div class="card">
             <h2>More in {{ $book->genre }}</h2>
             <div class="grid grid-2">
                 @foreach($related as $rel)
-                    <a href="{{ route('books.show', $rel->id) }}" style="text-decoration: none; color: inherit;">
-                        <div class="card" style="cursor: pointer; margin-bottom: 0;"
-                             onmouseover="this.style.borderColor='#111827'"
-                             onmouseout="this.style.borderColor='#ddd'">
+                    <a href="{{ route('books.show', ['book' => $rel->id, 'back' => $backUrl]) }}" style="text-decoration: none; color: inherit;">
+                        <div class="card" style="cursor: pointer; margin-bottom: 0;" onmouseover="this.style.borderColor='#111827'" onmouseout="this.style.borderColor='#ddd'">
                             <strong>{{ $rel->title }}</strong><br>
                             <span class="muted">{{ $rel->author }}</span>
                             <div style="margin-top: 6px;">
@@ -244,10 +238,10 @@
             </div>
         </div>
     @endif
+@endsection
 
 @push('scripts')
 <script>
-    // Track selected star value
     let selectedRating = {{ $userReview ? $userReview->rating : 0 }};
 
     function hoverStars(n) {
@@ -269,4 +263,3 @@
     }
 </script>
 @endpush
-@endsection

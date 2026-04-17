@@ -8,7 +8,8 @@ use App\Models\BookEditHistory;
 use App\Models\BorrowRecord;
 use App\Models\Reservation;
 use App\Models\User;
-use App\Models\BookReview; // make sure this is added
+use App\Models\BookReview;
+use Illuminate\Http\Request;
 
 class HomeController extends Controller
 {
@@ -159,5 +160,38 @@ $canRead = $alreadyBorrowed;
 
         Bookmark::create(['user_id' => $userId, 'book_id' => $book->id]);
         return back()->with('success', "Bookmarked \"{$book->title}\".");
+    }
+
+    public function search(Request $request)
+    {
+        $q = trim((string) $request->input('q', ''));
+
+        $books = collect();
+        $users = collect();
+
+        if ($q !== '') {
+            $books = Book::query()
+                ->where(function ($query) use ($q) {
+                    $query->where('title', 'like', "%{$q}%")
+                        ->orWhere('author', 'like', "%{$q}%")
+                        ->orWhere('genre', 'like', "%{$q}%")
+                        ->orWhere('isbn', 'like', "%{$q}%")
+                        ->orWhere('description', 'like', "%{$q}%");
+                })
+                ->latest()
+                ->take(25)
+                ->get();
+
+            $users = User::query()
+                ->where(function ($query) use ($q) {
+                    $query->where('name', 'like', "%{$q}%")
+                        ->orWhere('bio', 'like', "%{$q}%");
+                })
+                ->latest()
+                ->take(25)
+                ->get();
+        }
+
+        return view('search', compact('q', 'books', 'users'));
     }
 }

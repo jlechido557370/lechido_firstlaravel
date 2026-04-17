@@ -7,15 +7,18 @@ use App\Http\Controllers\BookReviewController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
 use App\Http\Controllers\User\ProfileController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // ── Public routes ─────────────────────────────────────────────────────────────
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/catalogue', [HomeController::class, 'catalogue'])->name('books.catalogue');
+Route::get('/search', [HomeController::class, 'search'])->name('search');
 Route::get('/books/{book}', [HomeController::class, 'show'])->name('books.show');
 
 // Public user profiles
 Route::get('/users/{user}', [ProfileController::class, 'publicProfile'])->name('user.public_profile');
+Route::get('/users/{user}/ratings', [ProfileController::class, 'publicRatings'])->name('user.public_ratings');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -60,6 +63,7 @@ Route::middleware('auth')->group(function () {
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'show'])->name('user.profile');
+    Route::get('/ratings', [ProfileController::class, 'ratings'])->name('user.ratings');
     Route::put('/profile', [ProfileController::class, 'updateProfile'])->name('user.profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('user.password.update');
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('user.avatar.update');

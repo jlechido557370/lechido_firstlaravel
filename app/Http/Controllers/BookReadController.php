@@ -10,6 +10,7 @@ class BookReadController extends Controller
 {
     public function read(Book $book)
     {
+        $backUrl = request('back');
         // Must have an active borrow
         $hasBorrowed = BorrowRecord::where('user_id', auth()->id())
             ->where('book_id', $book->id)
@@ -17,7 +18,7 @@ class BookReadController extends Controller
             ->exists();
 
         if (! $hasBorrowed) {
-            return redirect()->route('books.show', $book->id)
+            return redirect()->route('books.show', ['book' => $book->id, 'back' => request('back')])
                 ->with('error', 'You must borrow this book before you can read it.');
         }
 
@@ -47,7 +48,8 @@ class BookReadController extends Controller
             'googleBooksId',
             'googleFound',
             'webReaderLink',
-            'previewLink'
+            'previewLink',
+            'backUrl'
         ));
     }
 

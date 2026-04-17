@@ -66,7 +66,7 @@
 
         <div class="grid grid-2">
             @forelse ($books as $book)
-                <a href="{{ route('books.show', $book->id) }}" style="text-decoration: none; color: inherit;">
+                <a href="{{ route('books.show', ['book' => $book->id, 'back' => request()->fullUrl()]) }}" style="text-decoration: none; color: inherit;">
                     <div class="card" style="cursor: pointer; margin-bottom: 0;"
                          onmouseover="this.style.borderColor='#111827'"
                          onmouseout="this.style.borderColor='#ddd'">

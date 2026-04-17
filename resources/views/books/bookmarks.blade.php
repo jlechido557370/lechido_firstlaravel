@@ -31,7 +31,7 @@
                         @if($book)
                         <tr>
                             <td>
-                                <a href="{{ route('books.show', $book->id) }}">{{ $book->title }}</a><br>
+                                <a href="{{ route('books.show', ['book' => $book->id, 'back' => request()->fullUrl()]) }}">{{ $book->title }}</a><br>
                                 <span class="muted">{{ $book->author }}</span>
                             </td>
                             <td>{{ $book->genre }}</td>

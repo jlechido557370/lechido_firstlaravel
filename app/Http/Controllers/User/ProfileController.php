@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\BookReview;
 use App\Models\BorrowRecord;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -21,15 +22,48 @@ class ProfileController extends Controller
             ->latest()
             ->get();
 
-        return view('user.profile', compact('user', 'borrowHistory'));
+        $ratings = BookReview::with('book')
+            ->where('user_id', $user->id)
+            ->latest()
+            ->take(10)
+            ->get();
+
+        return view('user.profile', compact('user', 'borrowHistory', 'ratings'));
     }
 
     // ── Public profile (anyone can view) ─────────────────────────────────────
     public function publicProfile(User $user)
     {
         $borrowCount = BorrowRecord::where('user_id', $user->id)->count();
+        $ratings = BookReview::with('book')
+            ->where('user_id', $user->id)
+            ->latest()
+            ->take(6)
+            ->get();
 
-        return view('user.public_profile', compact('user', 'borrowCount'));
+        return view('user.public_profile', compact('user', 'borrowCount', 'ratings'));
+    }
+
+    public function ratings()
+    {
+        $user = auth()->user();
+
+        $ratings = BookReview::with(['book', 'book.reviews'])
+            ->where('user_id', $user->id)
+            ->latest()
+            ->get();
+
+        return view('user.ratings', compact('user', 'ratings'));
+    }
+
+    public function publicRatings(User $user)
+    {
+        $ratings = BookReview::with(['book', 'book.reviews'])
+            ->where('user_id', $user->id)
+            ->latest()
+            ->get();
+
+        return view('user.ratings', compact('user', 'ratings'));
     }
 
     // ── Update name / email / bio ─────────────────────────────────────────────

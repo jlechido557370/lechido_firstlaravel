@@ -35,9 +35,9 @@
                 </thead>
                 <tbody>
                     @foreach($byGenre[$genre] as $book)
-                        <tr style="cursor: pointer;" onclick="window.location='{{ route('books.show', $book->id) }}'">
+                        <tr style="cursor: pointer;" onclick="window.location='{{ route('books.show', ['book' => $book->id, 'back' => request()->fullUrl()]) }}'">
                             <td>
-                                <a href="{{ route('books.show', $book->id) }}">{{ $book->title }}</a>
+                                <a href="{{ route('books.show', ['book' => $book->id, 'back' => request()->fullUrl()]) }}">{{ $book->title }}</a>
                             </td>
                             <td>{{ $book->author }}</td>
                             <td>{{ $book->published_year }}</td>
