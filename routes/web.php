@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BlockController;
 use App\Http\Controllers\FollowController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\BookReadController;
@@ -8,6 +9,7 @@ use App\Http\Controllers\BookReviewController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\UserBookController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Staff\DashboardController as StaffDashboardController;
@@ -32,8 +34,9 @@ Route::middleware('guest')->group(function () {
 
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
-// Payment webhook (no auth — Finverse server calls this)
+// Webhooks (no auth — external services call these)
 Route::post('/payments/webhook', [PaymentController::class, 'webhook'])->name('payments.webhook');
+Route::post('/subscription/webhook', [SubscriptionController::class, 'webhook'])->name('subscription.webhook');
 
 // Admin
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
@@ -88,22 +91,26 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('user.avatar.update');
     Route::delete('/profile/avatar', [ProfileController::class, 'removeAvatar'])->name('user.avatar.remove');
 
-    // Payments
-    Route::post('/payments/initiate/{borrowing}', [PaymentController::class, 'initiate'])->name('payments.initiate');
+    // Payments — show method selection
+    Route::get('/payments/initiate/{borrowing}', [PaymentController::class, 'initiate'])->name('payments.initiate');
+    Route::post('/payments/process/{borrowing}', [PaymentController::class, 'process'])->name('payments.process');
     Route::get('/payments/callback', [PaymentController::class, 'callback'])->name('payments.callback');
     Route::post('/payments/{payment}/manual-confirm', [PaymentController::class, 'manualConfirm'])->name('payments.manual_confirm');
+    Route::get('/payments/{payment}/receipt', [PaymentController::class, 'receipt'])->name('payments.receipt');
 
-    // Notifications (JSON for dropdown + mark all read)
+    // Notifications
     Route::get('/notifications/json', [MessageController::class, 'notificationsJson'])->name('notifications.json');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read_all');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
-    // Keep full page as fallback
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
 
     // Follows
     Route::post('/follow/user/{user}', [FollowController::class, 'toggleUser'])->name('follow.user');
     Route::post('/follow/author', [FollowController::class, 'toggleAuthor'])->name('follow.author');
     Route::get('/following', [FollowController::class, 'following'])->name('user.following');
+
+    // Block
+    Route::post('/users/{user}/block', [BlockController::class, 'toggle'])->name('block.user');
 
     // User book publishing
     Route::get('/publish', [UserBookController::class, 'create'])->name('user.publish');
@@ -115,4 +122,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/messages/{user}', [MessageController::class, 'conversation'])->name('messages.conversation');
     Route::post('/messages/{user}/send', [MessageController::class, 'send'])->name('messages.send');
     Route::get('/messages/recent/json', [MessageController::class, 'recentJson'])->name('messages.recent.json');
+
+    // Subscription
+    Route::get('/subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
+    Route::get('/subscription/confirm', [SubscriptionController::class, 'confirmPage'])->name('subscription.confirm');
+    Route::post('/subscription/subscribe', [SubscriptionController::class, 'subscribe'])->name('subscription.subscribe');
+    Route::get('/subscription/callback', [SubscriptionController::class, 'callback'])->name('subscription.callback');
+    Route::get('/subscription/receipt', [SubscriptionController::class, 'receipt'])->name('subscription.receipt');
+    Route::post('/subscription/cancel', [SubscriptionController::class, 'cancel'])->name('subscription.cancel');
 });

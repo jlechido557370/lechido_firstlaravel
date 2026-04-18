@@ -13,8 +13,9 @@ use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
-    const MAX_BORROWS = 5;
-    const LOAN_DAYS   = 10;
+    const MAX_BORROWS_FREE = 5;
+    const MAX_BORROWS_SUB  = 25;
+    const LOAN_DAYS       = 10;
 
     public function index()
     {
@@ -101,10 +102,15 @@ class DashboardController extends Controller
     public function borrowBook(Book $book)
     {
         $user = auth()->user();
+        $limit = $user->isSubscribed() ? self::MAX_BORROWS_SUB : self::MAX_BORROWS_FREE;
 
         $activeBorrows = BorrowRecord::where('user_id', $user->id)->whereNull('returned_at')->count();
-        if ($activeBorrows >= self::MAX_BORROWS) {
-            return back()->with('error', 'You have reached the maximum limit of ' . self::MAX_BORROWS . ' borrowed books.');
+        if ($activeBorrows >= $limit) {
+            if (!$user->isSubscribed()) {
+                return back()->with('subscription_prompt', true)
+                             ->with('error', 'You have reached the free limit of ' . self::MAX_BORROWS_FREE . ' borrowed books. Subscribe to borrow up to 25 at once.');
+            }
+            return back()->with('error', 'You have reached the maximum limit of ' . self::MAX_BORROWS_SUB . ' borrowed books.');
         }
 
         $alreadyBorrowed = BorrowRecord::where('user_id', $user->id)

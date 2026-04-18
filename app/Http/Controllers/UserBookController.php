@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
@@ -13,7 +12,8 @@ use Illuminate\Support\Facades\Storage;
 
 class UserBookController extends Controller
 {
-    const MAX_PER_DAY = 2;
+    const MAX_PER_DAY_FREE  = 2;
+    const MAX_TOTAL_SUB     = 50;
 
     public function create()
     {
@@ -24,29 +24,48 @@ class UserBookController extends Controller
     {
         $user = auth()->user();
 
-        // Check daily limit
-        $todayCount = UserBook::where('user_id', $user->id)
-            ->whereDate('created_at', today())
-            ->count();
-
-        if ($todayCount >= self::MAX_PER_DAY) {
-            return back()->with('error', 'You can only submit ' . self::MAX_PER_DAY . ' books per day. Try again tomorrow.');
+        if ($user->isSubscribed()) {
+            $totalCount = UserBook::where('user_id', $user->id)->count();
+            if ($totalCount >= self::MAX_TOTAL_SUB) {
+                return back()->with('subscription_limit', true)
+                             ->with('error', 'You have reached the 50-book publish limit for subscribers.');
+            }
+        } else {
+            $todayCount = UserBook::where('user_id', $user->id)->whereDate('created_at', today())->count();
+            if ($todayCount >= self::MAX_PER_DAY_FREE) {
+                return back()->with('subscription_prompt', true)
+                             ->with('error', 'Free users can submit up to ' . self::MAX_PER_DAY_FREE . ' books per day. Subscribe to publish up to 50!');
+            }
         }
+
+        $genresRaw = $request->input('genres', []);
+        if (is_string($genresRaw)) {
+            $genresRaw = array_filter(array_map('trim', explode(',', $genresRaw)));
+        }
+        $genresList = array_values(array_filter((array) $genresRaw));
+        $primaryGenre = $genresList[0] ?? $request->input('genre', '');
 
         $data = $request->validate([
             'title'          => ['required', 'string', 'max:255'],
             'author'         => ['required', 'string', 'max:255'],
             'isbn'           => ['nullable', 'string', 'max:50'],
-            'genre'          => ['required', 'string', 'max:100'],
             'published_year' => ['nullable', 'integer', 'min:1', 'max:' . date('Y')],
             'description'    => ['nullable', 'string', 'max:5000'],
             'read_url'       => ['nullable', 'url', 'max:500'],
             'cover_image'    => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:3072'],
+            'book_type'      => ['nullable', 'in:book,manga,comic'],
+            'manga_cover_url'=> ['nullable', 'url', 'max:500'],
         ]);
+
+        if (empty($primaryGenre)) {
+            return back()->withErrors(['genres' => 'Please select at least one genre.'])->withInput();
+        }
 
         $coverPath = null;
         if ($request->hasFile('cover_image')) {
             $coverPath = $request->file('cover_image')->store('book-covers', 'public');
+        } elseif ($request->filled('manga_cover_url')) {
+            $coverPath = $request->manga_cover_url; // Store external URL directly
         }
 
         UserBook::create([
@@ -54,11 +73,13 @@ class UserBookController extends Controller
             'title'          => $data['title'],
             'author'         => $data['author'],
             'isbn'           => $data['isbn'] ?? null,
-            'genre'          => $data['genre'],
+            'genre'          => $primaryGenre,
+            'genres'         => $genresList,
             'published_year' => $data['published_year'] ?? null,
             'description'    => $data['description'] ?? null,
             'read_url'       => $data['read_url'] ?? null,
             'cover_image'    => $coverPath,
+            'book_type'      => $data['book_type'] ?? 'book',
             'status'         => 'pending',
         ]);
 
@@ -71,39 +92,36 @@ class UserBookController extends Controller
     {
         if (!auth()->user()->isAdminOrStaff()) abort(403);
 
-        // Copy to main books table
         $book = Book::create([
-            'title'          => $userBook->title,
-            'author'         => $userBook->author,
-            'isbn'           => $userBook->isbn ?? 'UB-' . $userBook->id . '-' . time(),
-            'genre'          => $userBook->genre,
-            'published_year' => $userBook->published_year ?? date('Y'),
-            'total_copies'   => 1,
+            'title'            => $userBook->title,
+            'author'           => $userBook->author,
+            'isbn'             => $userBook->isbn ?? 'UB-' . $userBook->id . '-' . time(),
+            'genre'            => $userBook->genre,
+            'genres'           => $userBook->genres ?? [$userBook->genre],
+            'published_year'   => $userBook->published_year ?? date('Y'),
+            'total_copies'     => 1,
             'available_copies' => 1,
-            'description'    => $userBook->description,
-            'read_url'       => $userBook->read_url,
-            'cover_image'    => $userBook->cover_image,
+            'description'      => $userBook->description,
+            'read_url'         => $userBook->read_url,
+            'cover_image'      => $userBook->cover_image,
+            'book_type'        => $userBook->book_type ?? 'book',
         ]);
 
         $userBook->update([
-            'status'       => 'approved',
-            'reviewed_by'  => auth()->id(),
-            'reviewed_at'  => now(),
+            'status'      => 'approved',
+            'reviewed_by' => auth()->id(),
+            'reviewed_at' => now(),
         ]);
 
-        // Notify submitter
         UserNotification::create([
             'user_id' => $userBook->user_id,
             'type'    => 'book_approved',
             'message' => "Your book \"{$userBook->title}\" has been approved and published.",
         ]);
 
-        // Notify followers of the submitter and followers of the author
         $submitter = $userBook->user;
         if ($submitter) {
-            $followerIds = Follow::where('following_id', $submitter->id)
-                ->pluck('follower_id');
-
+            $followerIds = Follow::where('following_id', $submitter->id)->pluck('follower_id');
             foreach ($followerIds as $followerId) {
                 if ($followerId !== $userBook->user_id) {
                     UserNotification::create([
@@ -115,10 +133,7 @@ class UserBookController extends Controller
             }
         }
 
-        // Notify users following this author
-        $authorFollowerIds = AuthorFollow::where('author_name', $userBook->author)
-            ->pluck('user_id');
-
+        $authorFollowerIds = AuthorFollow::where('author_name', $userBook->author)->pluck('user_id');
         foreach ($authorFollowerIds as $uid) {
             if ($uid !== $userBook->user_id) {
                 UserNotification::create([
@@ -130,14 +145,12 @@ class UserBookController extends Controller
         }
 
         ActivityLog::record('book_submission_approved', auth()->user()->displayName() . " approved book submission: {$userBook->title}");
-
         return back()->with('success', "Book \"{$userBook->title}\" approved and published.");
     }
 
     public function reject(Request $request, UserBook $userBook)
     {
         if (!auth()->user()->isAdminOrStaff()) abort(403);
-
         $request->validate(['rejection_reason' => ['required', 'string', 'max:500']]);
 
         $userBook->update([
@@ -154,7 +167,6 @@ class UserBookController extends Controller
         ]);
 
         ActivityLog::record('book_submission_rejected', auth()->user()->displayName() . " rejected book submission: {$userBook->title}");
-
         return back()->with('success', "Book \"{$userBook->title}\" rejected.");
     }
 

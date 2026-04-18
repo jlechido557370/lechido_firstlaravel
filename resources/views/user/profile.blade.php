@@ -15,9 +15,12 @@
             <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
                 <img src="{{ $user->avatarUrl() }}" alt="avatar" style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 2px solid #e5e7eb;">
                 <div>
-                    <div style="font-weight: bold; font-size: 16px;">{{ $user->name }}</div>
+                    <div style="font-weight: bold; font-size: 16px;">{{ $user->badgedName() }}</div>
                     <div class="muted" style="font-size: 13px;">{{ ucfirst($user->role) }}</div>
                     <div class="muted" style="font-size: 13px;">Joined {{ $user->created_at->format('M Y') }}</div>
+                    @if($user->isSubscribed())
+                        <div style="font-size: 13px; color: #92400e; margin-top: 4px;">Subscriber — expires {{ $user->subscription_expires_at?->format('M d, Y') }}</div>
+                    @endif
                 </div>
             </div>
 
@@ -46,7 +49,7 @@
                 @csrf
                 @method('PUT')
                 <div style="margin-bottom: 12px;">
-                    <label>Username <span class="muted" style="font-size:12px;">(letters, numbers, underscores — used for login)</span></label>
+                    <label>Username <span class="muted" style="font-size:12px;">(letters, numbers, underscores)</span></label>
                     <input type="text" name="username" value="{{ old('username', $user->username) }}" required pattern="[a-zA-Z0-9_]+" minlength="3" maxlength="30">
                     @error('username')<div style="color:#b91c1c; font-size:13px;">{{ $message }}</div>@enderror
                 </div>
@@ -76,10 +79,16 @@
                         @endforeach
                     </div>
                 </div>
-                <div style="margin-bottom: 16px;">
+                <div style="margin-bottom: 12px;">
                     <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:normal;">
                         <input type="checkbox" name="allow_dms" value="1" {{ $user->allow_dms ? 'checked' : '' }} style="width:auto;">
                         Allow other users to send me direct messages
+                    </label>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:normal;">
+                        <input type="checkbox" name="hide_real_name" value="1" {{ $user->hide_real_name ? 'checked' : '' }} style="width:auto;">
+                        Hide my real name from the public (only your username will be shown)
                     </label>
                 </div>
                 <button type="submit">Save Profile</button>

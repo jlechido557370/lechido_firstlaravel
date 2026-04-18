@@ -35,6 +35,13 @@ class PaymentController extends Controller
         }
     }
 
+    const PAYMENT_METHODS = [
+        'gcash'         => 'GCash',
+        'maya'          => 'Maya',
+        'bank_transfer' => 'Bank Transfer',
+        'cash'          => 'Cash at Counter',
+    ];
+
     public function initiate(BorrowRecord $borrowing)
     {
         $user = auth()->user();
@@ -110,7 +117,94 @@ class PaymentController extends Controller
             return redirect()->away($paymentUrl);
         }
 
-        return view('payments.confirm', compact('payment', 'borrowing', 'fine'));
+        $paymentMethods = self::PAYMENT_METHODS;
+        return view('payments.confirm', compact('payment', 'borrowing', 'fine', 'paymentMethods'));
+    }
+
+    /**
+     * Handle the payment method form submission from the confirm page.
+     */
+    public function process(Request $request, BorrowRecord $borrowing)
+    {
+        $request->validate([
+            'payment_method' => ['required', 'in:gcash,maya,bank_transfer,cash'],
+        ]);
+
+        $user = auth()->user();
+
+        if ($borrowing->user_id !== $user->id) {
+            return back()->with('error', 'Unauthorized.');
+        }
+
+        $fine = $borrowing->calculateFine();
+
+        if ($fine <= 0 || $borrowing->fine_paid) {
+            return back()->with('error', 'No fine to pay or already paid.');
+        }
+
+        $payment = $borrowing->payments()->where('status', 'pending')->latest()->first();
+
+        if (!$payment) {
+            $payment = Payment::create([
+                'user_id'          => $user->id,
+                'borrow_record_id' => $borrowing->id,
+                'amount'           => $fine,
+                'status'           => 'pending',
+            ]);
+        }
+
+        $payment->update(['payment_method' => $request->payment_method]);
+
+        // For cash/bank_transfer, mark complete immediately and show receipt
+        if (in_array($request->payment_method, ['cash', 'bank_transfer'])) {
+            $this->markPaymentComplete($payment, ['payment_method' => $request->payment_method]);
+            return redirect()->route('payments.receipt', $payment->id);
+        }
+
+        // For online methods (gcash, maya) — attempt Finverse or fall back to receipt
+        $accessToken = $this->getAccessToken();
+        if ($accessToken) {
+            try {
+                $response = Http::withToken($accessToken)->timeout(15)
+                    ->post(self::FINVERSE_API . '/payment-links', [
+                        'amount'       => (int) round($fine * 100),
+                        'currency'     => 'PHP',
+                        'description'  => 'Library fine for: ' . ($borrowing->book->title ?? 'Book'),
+                        'redirect_url' => route('payments.callback'),
+                        'webhook_url'  => route('payments.webhook'),
+                        'metadata'     => ['borrow_record_id' => $borrowing->id, 'user_id' => $user->id],
+                    ]);
+                if ($response->successful()) {
+                    $data = $response->json();
+                    $url  = $data['payment_url'] ?? $data['url'] ?? null;
+                    if ($url) {
+                        $payment->update(['finverse_link_id' => $data['link_id'] ?? $data['id'] ?? null, 'payment_url' => $url]);
+                        return redirect()->away($url);
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error('Finverse process exception', ['error' => $e->getMessage()]);
+            }
+        }
+
+        // Finverse not available — treat same as cash
+        $this->markPaymentComplete($payment, ['payment_method' => $request->payment_method]);
+        return redirect()->route('payments.receipt', $payment->id);
+    }
+
+    /**
+     * Show the payment receipt page (with popup modal).
+     */
+    public function receipt(Payment $payment)
+    {
+        if ($payment->user_id !== auth()->id()) {
+            return back()->with('error', 'Unauthorized.');
+        }
+
+        $borrowing   = $payment->borrowRecord;
+        $methodLabel = self::PAYMENT_METHODS[$payment->payment_method ?? ''] ?? ucfirst($payment->payment_method ?? 'N/A');
+
+        return view('payments.payments_receipt', compact('payment', 'borrowing', 'methodLabel'));
     }
 
     public function callback(Request $request)
@@ -123,8 +217,7 @@ class PaymentController extends Controller
             if ($payment) {
                 if ($status === 'success' || $status === 'completed') {
                     $this->markPaymentComplete($payment, ['callback_data' => $request->all()]);
-                    return redirect()->route('user.dashboard')
-                        ->with('success', 'Payment of ₱' . number_format($payment->amount, 2) . ' confirmed.');
+                    return redirect()->route('payments.receipt', $payment->id);
                 }
 
                 $payment->update([
@@ -182,8 +275,7 @@ class PaymentController extends Controller
 
         $this->markPaymentComplete($payment, ['manual' => true]);
 
-        return redirect()->route('user.dashboard')
-            ->with('success', 'Payment of ₱' . number_format($payment->amount, 2) . ' recorded. Awaiting verification.');
+        return redirect()->route('payments.receipt', $payment->id);
     }
 
     private function markPaymentComplete(Payment $payment, array $extra = []): void

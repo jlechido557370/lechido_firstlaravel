@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', $user->displayName() . "'s Profile")
+@section('title', $user->publicDisplayName() . "'s Profile")
 
 @section('content')
     @php $backUrl = request('back') ?: route('home'); @endphp
@@ -8,10 +8,10 @@
         <p style="margin-bottom: 12px;"><a href="{{ $backUrl }}">&larr; Back</a></p>
 
         <div style="display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap;">
-            <img src="{{ $user->avatarUrl() }}" alt="{{ $user->displayName() }}" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #e5e7eb; flex-shrink: 0;">
+            <img src="{{ $user->avatarUrl() }}" alt="{{ $user->publicDisplayName() }}" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #e5e7eb; flex-shrink: 0;">
             <div style="flex:1; min-width:200px;">
-                <h1 style="margin: 0 0 4px;">{{ $user->displayName() }}</h1>
-                @if($user->name !== $user->username && $user->username)
+                <h1 style="margin: 0 0 4px;">{{ $user->badgedName() }}</h1>
+                @if(!$user->hide_real_name && $user->name !== $user->username && $user->username)
                     <div class="muted" style="font-size:13px; margin-bottom:4px;">{{ $user->name }}</div>
                 @endif
                 <p class="muted" style="margin: 0 0 8px;">
@@ -44,13 +44,19 @@
                                     {{ $isFollowing ? 'Unfollow' : 'Follow' }}
                                 </button>
                             </form>
-                            @if($user->allow_dms)
+                            @if($user->allow_dms && !$isBlocking)
                                 <a href="{{ route('messages.conversation', $user->id) }}" style="display:inline-block; padding:7px 14px; background:#111827; color:white; border-radius:6px; font-size:13px; text-decoration:none;">
                                     Message
                                 </a>
-                            @else
+                            @elseif(!$isBlocking)
                                 <span style="font-size:13px; color:#6b7280; padding:7px 0;">Messages disabled</span>
                             @endif
+                            <form method="POST" action="{{ route('block.user', $user->id) }}">
+                                @csrf
+                                <button type="submit" style="width:auto; padding:7px 14px; font-size:13px; background: {{ $isBlocking ? '#6b7280' : '#dc2626' }}; border-color: {{ $isBlocking ? '#6b7280' : '#dc2626' }};">
+                                    {{ $isBlocking ? 'Unblock' : 'Block' }}
+                                </button>
+                            </form>
                         </div>
                     @else
                         <div style="margin-top:12px;">

@@ -13,7 +13,6 @@ use Illuminate\Http\Request;
 
 class HomeController extends Controller
 {
-    // ── Shared filter logic ──────────────────────────────────────────────────
     private function applyFilters($query)
     {
         if ($search = request('search')) {
@@ -21,12 +20,19 @@ class HomeController extends Controller
                 $q->where('title', 'like', "%{$search}%")
                   ->orWhere('author', 'like', "%{$search}%")
                   ->orWhere('genre', 'like', "%{$search}%")
-                  ->orWhere('published_year', 'like', "%{$search}%");
+                  ->orWhere('published_year', 'like', "%{$search}%")
+                  ->orWhere('isbn', 'like', "%{$search}%")
+                  ->orWhere('isbn_13', 'like', "%{$search}%")
+                  ->orWhere('isbn_10', 'like', "%{$search}%");
             });
         }
 
         if ($genre = request('genre')) {
             $query->where('genre', $genre);
+        }
+
+        if ($type = request('type')) {
+            $query->where('book_type', $type);
         }
 
         if ($availability = request('availability')) {
@@ -39,17 +45,16 @@ class HomeController extends Controller
 
         $sort = request('sort', 'latest');
         match ($sort) {
-            'year_asc'    => $query->orderBy('published_year', 'asc'),
-            'year_desc'   => $query->orderBy('published_year', 'desc'),
-            'title_asc'   => $query->orderBy('title', 'asc'),
-            'title_desc'  => $query->orderBy('title', 'desc'),
-            default       => $query->latest(),
+            'year_asc'   => $query->orderBy('published_year', 'asc'),
+            'year_desc'  => $query->orderBy('published_year', 'desc'),
+            'title_asc'  => $query->orderBy('title', 'asc'),
+            'title_desc' => $query->orderBy('title', 'desc'),
+            default      => $query->latest(),
         };
 
         return $query;
     }
 
-    // ── Home page ────────────────────────────────────────────────────────────
     public function index()
     {
         $stats = [
@@ -60,12 +65,11 @@ class HomeController extends Controller
         ];
 
         $books  = $this->applyFilters(Book::query())->get();
-        $genres = Book::select('genre')->distinct()->orderBy('genre')->pluck('genre');
+        $genres = Book::select('genre')->distinct()->whereNotNull('genre')->orderBy('genre')->pluck('genre');
 
         return view('home', compact('stats', 'books', 'genres'));
     }
 
-    // ── Book detail page ─────────────────────────────────────────────────────
     public function show(Book $book)
     {
         $alreadyBorrowed = false;
@@ -77,6 +81,7 @@ class HomeController extends Controller
 
         if (auth()->check()) {
             $userId = auth()->id();
+            $user   = auth()->user();
 
             $currentBorrowings = BorrowRecord::where('user_id', $userId)
                 ->whereNull('returned_at')
@@ -86,20 +91,14 @@ class HomeController extends Controller
                 ->where('status', 'pending')
                 ->pluck('book_id');
 
+            $limit           = $user->isSubscribed() ? 25 : 5;
             $alreadyBorrowed = $currentBorrowings->contains($book->id);
             $alreadyReserved = $reservations->contains($book->id);
-            $atLimit         = $currentBorrowings->count() >= 5;
-            $isBookmarked    = Bookmark::where('user_id', $userId)
-                                       ->where('book_id', $book->id)
-                                       ->exists();
+            $atLimit         = $currentBorrowings->count() >= $limit;
+            $isBookmarked    = Bookmark::where('user_id', $userId)->where('book_id', $book->id)->exists();
+            $canRead         = $alreadyBorrowed;
 
-      // Read Now is always available for borrowed books — Google Books API handles lookup
-$canRead = $alreadyBorrowed;
-
-            // Load this user's existing review
-            $userReview = BookReview::where('user_id', $userId)
-                                    ->where('book_id', $book->id)
-                                    ->first();
+            $userReview = BookReview::where('user_id', $userId)->where('book_id', $book->id)->first();
         }
 
         $borrowCount = BorrowRecord::where('book_id', $book->id)->count();
@@ -110,7 +109,6 @@ $canRead = $alreadyBorrowed;
                            ->take(4)
                            ->get();
 
-        // All reviews for this book
         $reviews   = $book->reviews()->with('user')->get();
         $avgRating = $book->average_rating;
 
@@ -121,10 +119,9 @@ $canRead = $alreadyBorrowed;
         ));
     }
 
-    // ── Catalogue page (browse by genre) ─────────────────────────────────────
     public function catalogue()
     {
-        $genres = Book::select('genre')->distinct()->orderBy('genre')->pluck('genre');
+        $genres = Book::select('genre')->distinct()->whereNotNull('genre')->orderBy('genre')->pluck('genre');
 
         $byGenre = [];
         foreach ($genres as $genre) {
@@ -136,7 +133,6 @@ $canRead = $alreadyBorrowed;
         return view('books.catalogue', compact('genres', 'byGenre', 'totalBooks'));
     }
 
-    // ── Bookmarks page ───────────────────────────────────────────────────────
     public function bookmarks()
     {
         $bookmarks = Bookmark::where('user_id', auth()->id())
@@ -147,7 +143,6 @@ $canRead = $alreadyBorrowed;
         return view('books.bookmarks', compact('bookmarks'));
     }
 
-    // ── Toggle bookmark ──────────────────────────────────────────────────────
     public function toggleBookmark(Book $book)
     {
         $userId   = auth()->id();
@@ -176,6 +171,8 @@ $canRead = $alreadyBorrowed;
                         ->orWhere('author', 'like', "%{$q}%")
                         ->orWhere('genre', 'like', "%{$q}%")
                         ->orWhere('isbn', 'like', "%{$q}%")
+                        ->orWhere('isbn_13', 'like', "%{$q}%")
+                        ->orWhere('isbn_10', 'like', "%{$q}%")
                         ->orWhere('description', 'like', "%{$q}%");
                 })
                 ->latest()

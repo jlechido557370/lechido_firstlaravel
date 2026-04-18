@@ -64,15 +64,18 @@ class ProfileController extends Controller
         $user = auth()->user();
 
         $data = $request->validate([
-            'name'      => ['required', 'string', 'max:255'],
-            'username'  => ['required', 'string', 'min:3', 'max:30', 'regex:/^[a-zA-Z0-9_]+$/', Rule::unique('users')->ignore($user->id)],
-            'email'     => ['required', 'email', Rule::unique('users')->ignore($user->id)],
-            'bio'       => ['nullable', 'string', 'max:500'],
-            'gender'    => ['nullable', Rule::in(['male', 'female', 'prefer_not_to_say'])],
-            'allow_dms' => ['boolean'],
+            'name'           => ['required', 'string', 'max:255'],
+            'username'       => ['required', 'string', 'min:3', 'max:30', 'regex:/^[a-zA-Z0-9_]+$/', Rule::unique('users')->ignore($user->id)],
+            'email'          => ['required', 'email', Rule::unique('users')->ignore($user->id)],
+            'bio'            => ['nullable', 'string', 'max:500'],
+            'gender'         => ['nullable', Rule::in(['male', 'female', 'prefer_not_to_say'])],
+            'allow_dms'      => ['boolean'],
+            'hide_real_name' => ['boolean'],
         ]);
 
-        $data['allow_dms'] = $request->has('allow_dms');
+        $data['allow_dms']      = $request->has('allow_dms');
+        $data['hide_real_name'] = $request->has('hide_real_name');
+
         $user->update($data);
 
         return back()->with('success', 'Profile updated successfully.');
