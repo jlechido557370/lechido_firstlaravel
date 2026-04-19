@@ -36,6 +36,12 @@ class User extends Authenticatable
     public function payments()        { return $this->hasMany(Payment::class); }
     public function userBooks()       { return $this->hasMany(UserBook::class); }
 
+    // NEW RELATION
+    public function userLists()
+    {
+        return $this->hasMany(UserList::class);
+    }
+
     public function userNotifications()
     {
         return $this->hasMany(UserNotification::class);
@@ -114,7 +120,6 @@ class User extends Authenticatable
         return $this->username ?? $this->name;
     }
 
-    // For public display: hides real name if user opted in
     public function publicDisplayName(): string
     {
         if ($this->hide_real_name) {
@@ -123,7 +128,6 @@ class User extends Authenticatable
         return $this->username ?? $this->name;
     }
 
-    // Appends + for subscribers
     public function badgedName(): string
     {
         $name = $this->displayName();

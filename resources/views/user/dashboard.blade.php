@@ -147,7 +147,6 @@
         </table>
     </div>
 
-    {{-- Payment History (latest 10, with link to full page) --}}
     <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <h2 style="margin: 0;">Payment History</h2>

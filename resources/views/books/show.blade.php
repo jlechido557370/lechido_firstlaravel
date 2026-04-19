@@ -31,7 +31,6 @@
                         <h1 style="margin-bottom: 4px;">{{ $book->title }}</h1>
                         <p class="muted" style="font-size: 16px; margin-bottom: 12px;">by <strong>{{ $book->author }}</strong></p>
                         <div style="display: flex; flex-wrap: wrap; gap: 4px;">
-                            {{-- Show genre badge. Only show type badge if it differs from genre (prevents "Manga Manga", "Comic Comic"). --}}
                             @if($book->genre)
                                 <span class="badge">{{ $book->genre }}</span>
                             @endif
@@ -53,15 +52,20 @@
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                         @auth
                             @if(auth()->user()->role === 'user')
-                                <form method="POST" action="{{ route('books.bookmark', $book->id) }}" style="margin: 0;">
-                                    @csrf
-                                    <button type="submit" style="width: auto; padding: 8px 16px; background: {{ $isBookmarked ? '#374151' : '#111827' }};">
-                                        {{ $isBookmarked ? 'Bookmarked' : 'Bookmark' }}
-                                    </button>
-                                </form>
+                                {{-- Bookmark button only for books --}}
+                                @if($book->book_type === 'book')
+                                    <form method="POST" action="{{ route('books.bookmark', $book->id) }}" style="margin: 0;">
+                                        @csrf
+                                        <button type="submit" style="width: auto; padding: 8px 16px; background: {{ $isBookmarked ? '#374151' : '#111827' }};">
+                                            {{ $isBookmarked ? 'Bookmarked' : 'Bookmark' }}
+                                        </button>
+                                    </form>
+                                @endif
                             @endif
                         @endauth
-                        @if($canRead)
+
+                        {{-- Read button only for books that are borrowed --}}
+                        @if($canRead && $book->book_type === 'book')
                             <a href="{{ route('books.read', ['book' => $book->id, 'back' => $currentUrl]) }}"
                                style="display: inline-block; padding: 8px 16px; background: #15803d; color: white; border-radius: 6px; text-decoration: none; font-size: 14px;">
                                 Read Book Online
@@ -72,39 +76,28 @@
 
                 <table style="width: auto; margin: 16px 0;">
                     <tr>
-                        <td style="padding: 4px 20px 4px 0; color: #6b7280; border: none; white-space: nowrap;">Published</td>
-                        <td style="padding: 4px 0; border: none;">{{ $book->published_year }}</td>
+                        <td style="padding: 4px 20px 4px 0; color: #6b7280;">Published</td>
+                        <td>{{ $book->published_year }}</td>
                     </tr>
-                    {{-- Show ISBN-13 and ISBN-10 for all book types including manga/comics --}}
                     @if($isbnDisplay['isbn_13'])
                     <tr>
-                        <td style="padding: 4px 20px 4px 0; color: #6b7280; border: none; white-space: nowrap;">ISBN-13</td>
-                        <td style="padding: 4px 0; border: none; font-family: monospace;">{{ $isbnDisplay['isbn_13'] }}</td>
+                        <td style="color: #6b7280;">ISBN-13</td>
+                        <td style="font-family: monospace;">{{ $isbnDisplay['isbn_13'] }}</td>
                     </tr>
                     @endif
                     @if($isbnDisplay['isbn_10'])
                     <tr>
-                        <td style="padding: 4px 20px 4px 0; color: #6b7280; border: none; white-space: nowrap;">ISBN-10</td>
-                        <td style="padding: 4px 0; border: none; font-family: monospace;">{{ $isbnDisplay['isbn_10'] }}</td>
-                    </tr>
-                    @endif
-                    @if(!$isbnDisplay['isbn_13'] && !$isbnDisplay['isbn_10'] && $book->isbn)
-                    <tr>
-                        <td style="padding: 4px 20px 4px 0; color: #6b7280; border: none; white-space: nowrap;">ISBN</td>
-                        <td style="padding: 4px 0; border: none; font-family: monospace;">{{ $book->isbn }}</td>
+                        <td style="color: #6b7280;">ISBN-10</td>
+                        <td style="font-family: monospace;">{{ $isbnDisplay['isbn_10'] }}</td>
                     </tr>
                     @endif
                     <tr>
-                        <td style="padding: 4px 20px 4px 0; color: #6b7280; border: none;">Type</td>
-                        <td style="padding: 4px 0; border: none;">{{ ucfirst($book->book_type ?? 'book') }}</td>
+                        <td style="color: #6b7280;">Type</td>
+                        <td>{{ ucfirst($book->book_type ?? 'book') }}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 4px 20px 4px 0; color: #6b7280; border: none;">Copies Available</td>
-                        <td style="padding: 4px 0; border: none;">{{ $book->available_copies }} / {{ $book->total_copies }}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 4px 20px 4px 0; color: #6b7280; border: none;">Times Borrowed</td>
-                        <td style="padding: 4px 0; border: none;">{{ $borrowCount }}</td>
+                        <td style="color: #6b7280;">Copies Available</td>
+                        <td>{{ $book->available_copies }} / {{ $book->total_copies }}</td>
                     </tr>
                 </table>
             </div>
@@ -116,27 +109,32 @@
 
         @auth
             @if(auth()->user()->role === 'user')
-                @if($alreadyBorrowed)
-                    <p><span class="badge" style="font-size: 14px; padding: 8px 14px;">You currently have this book borrowed</span></p>
-                @elseif($book->available_copies > 0 && !$atLimit)
-                    <form method="POST" action="{{ route('books.borrow', $book->id) }}" style="display: inline;">
-                        @csrf
-                        <button type="submit" style="width: auto; padding: 10px 24px;">Borrow this Book</button>
-                    </form>
-                @elseif($atLimit && $book->available_copies > 0)
-                    @if(!auth()->user()->isSubscribed())
-                        <p class="muted">You have reached the 5-book free limit. <a href="{{ route('subscription.index') }}">Subscribe</a> to borrow up to 25 books.</p>
-                    @else
-                        <p class="muted">You have reached the 25-book limit. Return a book first.</p>
+                {{-- Borrow/Reserve logic only for books --}}
+                @if($book->book_type === 'book')
+                    @if($alreadyBorrowed)
+                        <p><span class="badge" style="font-size: 14px; padding: 8px 14px;">You currently have this book borrowed</span></p>
+                    @elseif($book->available_copies > 0 && !$atLimit)
+                        <form method="POST" action="{{ route('books.borrow', $book->id) }}" style="display: inline;">
+                            @csrf
+                            <button type="submit" style="width: auto; padding: 10px 24px;">Borrow this Book</button>
+                        </form>
+                    @elseif($atLimit && $book->available_copies > 0)
+                        @if(!auth()->user()->isSubscribed())
+                            <p class="muted">You have reached the 5-book free limit. <a href="{{ route('subscription.index') }}">Subscribe</a> to borrow up to 25 books.</p>
+                        @else
+                            <p class="muted">You have reached the 25-book limit. Return a book first.</p>
+                        @endif
+                    @elseif($book->available_copies <= 0 && !$alreadyReserved)
+                        <form method="POST" action="{{ route('books.reserve', $book->id) }}" style="display: inline;">
+                            @csrf
+                            <button type="submit" style="width: auto; padding: 10px 24px;">Reserve this Book</button>
+                        </form>
+                        <p class="muted" style="margin-top: 8px; font-size: 13px;">No copies available — reserve to be notified when one is.</p>
+                    @elseif($alreadyReserved)
+                        <p><span class="badge" style="font-size: 14px; padding: 8px 14px;">You have already reserved this book</span></p>
                     @endif
-                @elseif($book->available_copies <= 0 && !$alreadyReserved)
-                    <form method="POST" action="{{ route('books.reserve', $book->id) }}" style="display: inline;">
-                        @csrf
-                        <button type="submit" style="width: auto; padding: 10px 24px;">Reserve this Book</button>
-                    </form>
-                    <p class="muted" style="margin-top: 8px; font-size: 13px;">No copies available — reserve to be notified when one is.</p>
-                @elseif($alreadyReserved)
-                    <p><span class="badge" style="font-size: 14px; padding: 8px 14px;">You have already reserved this book</span></p>
+                @else
+                    <p class="muted">Comics and Manga cannot be borrowed. You can only read them online.</p>
                 @endif
             @endif
         @else
@@ -146,6 +144,7 @@
         @endauth
     </div>
 
+    {{-- RATINGS & REVIEWS SECTION (shown for all book types) --}}
     @auth
         <div class="card">
             <h2 style="margin-bottom: 16px;">Ratings &amp; Reviews</h2>
@@ -222,6 +221,7 @@
         </div>
     @endauth
 
+    {{-- EDIT HISTORY SECTION --}}
     <div class="card">
         <h2>Edit History</h2>
         @if($editHistory->isEmpty())
@@ -229,9 +229,7 @@
         @else
             <table>
                 <thead>
-                    <tr>
-                        <th>Date</th><th>Action</th><th>Field</th><th>Old Value</th><th>New Value</th><th>By</th>
-                    </tr>
+                    <tr><th>Date</th><th>Action</th><th>Field</th><th>Old Value</th><th>New Value</th><th>By</th></tr>
                 </thead>
                 <tbody>
                     @foreach($editHistory as $entry)
@@ -249,6 +247,7 @@
         @endif
     </div>
 
+    {{-- RELATED BOOKS SECTION --}}
     @if($related->count() > 0)
         <div class="card">
             <h2>More like this</h2>

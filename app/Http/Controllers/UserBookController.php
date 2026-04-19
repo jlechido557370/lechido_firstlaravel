@@ -5,6 +5,7 @@ use App\Models\ActivityLog;
 use App\Models\AuthorFollow;
 use App\Models\Book;
 use App\Models\Follow;
+use App\Models\Series; // NEW
 use App\Models\UserBook;
 use App\Models\UserNotification;
 use Illuminate\Http\Request;
@@ -65,7 +66,7 @@ class UserBookController extends Controller
         if ($request->hasFile('cover_image')) {
             $coverPath = $request->file('cover_image')->store('book-covers', 'public');
         } elseif ($request->filled('manga_cover_url')) {
-            $coverPath = $request->manga_cover_url; // Store external URL directly
+            $coverPath = $request->manga_cover_url;
         }
 
         UserBook::create([
@@ -92,6 +93,59 @@ class UserBookController extends Controller
     {
         if (!auth()->user()->isAdminOrStaff()) abort(403);
 
+        // Comics / Manga → create Series
+        if (in_array($userBook->book_type, ['comic', 'manga'])) {
+            $series = Series::create([
+                'title'       => $userBook->title,
+                'author'      => $userBook->author,
+                'book_type'   => $userBook->book_type,
+                'description' => $userBook->description,
+                'cover_image' => $userBook->cover_image,
+                'genres'      => $userBook->genres ?? [$userBook->genre],
+            ]);
+
+            $userBook->update([
+                'status'      => 'approved',
+                'reviewed_by' => auth()->id(),
+                'reviewed_at' => now(),
+            ]);
+
+            UserNotification::create([
+                'user_id' => $userBook->user_id,
+                'type'    => 'book_approved',
+                'message' => "Your comic/manga \"{$userBook->title}\" has been approved as a series.",
+            ]);
+
+            $submitter = $userBook->user;
+            if ($submitter) {
+                $followerIds = Follow::where('following_id', $submitter->id)->pluck('follower_id');
+                foreach ($followerIds as $followerId) {
+                    if ($followerId !== $userBook->user_id) {
+                        UserNotification::create([
+                            'user_id' => $followerId,
+                            'type'    => 'followed_user_published',
+                            'message' => $submitter->displayName() . " published a new series: \"{$userBook->title}\".",
+                        ]);
+                    }
+                }
+            }
+
+            $authorFollowerIds = AuthorFollow::where('author_name', $userBook->author)->pluck('user_id');
+            foreach ($authorFollowerIds as $uid) {
+                if ($uid !== $userBook->user_id) {
+                    UserNotification::create([
+                        'user_id' => $uid,
+                        'type'    => 'followed_author_published',
+                        'message' => "Author \"{$userBook->author}\" has a new series: \"{$userBook->title}\".",
+                    ]);
+                }
+            }
+
+            ActivityLog::record('book_submission_approved', auth()->user()->displayName() . " approved series: {$userBook->title}");
+            return back()->with('success', "Series \"{$userBook->title}\" approved and published.");
+        }
+
+        // Normal Book
         $book = Book::create([
             'title'            => $userBook->title,
             'author'           => $userBook->author,

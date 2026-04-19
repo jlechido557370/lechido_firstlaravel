@@ -22,6 +22,11 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/catalogue', [HomeController::class, 'catalogue'])->name('books.catalogue');
 Route::get('/search', [HomeController::class, 'search'])->name('search');
 Route::get('/books/{book}', [HomeController::class, 'show'])->name('books.show');
+
+// ✅ NEW SERIES ROUTES (added here)
+Route::get('/series/{series}', [App\Http\Controllers\HomeController::class, 'showSeries'])->name('series.show');
+Route::post('/series/{series}/list', [App\Http\Controllers\HomeController::class, 'toggleList'])->name('series.toggleList');
+
 Route::get('/users/{user}', [ProfileController::class, 'publicProfile'])->name('user.public_profile');
 Route::get('/users/{user}/ratings', [ProfileController::class, 'publicRatings'])->name('user.public_ratings');
 

@@ -163,7 +163,7 @@
             {{ auth()->user()->isSubscribed() ? 'Manage Subscription' : 'Subscribe' }}
         </a>
         <a href="{{ route('user.dashboard') }}" class="drawer-link">Dashboard</a>
-        <a href="{{ route('books.bookmarks') }}" class="drawer-link">Bookmarks</a>
+        <a href="{{ route('books.bookmarks') }}" class="drawer-link">Bookmarks / Lists</a>
         <a href="{{ route('user.ratings') }}" class="drawer-link">Ratings</a>
         <a href="{{ route('user.following') }}" class="drawer-link">Following</a>
         <a href="{{ route('user.publish') }}" class="drawer-link">Publish a Book</a>
@@ -278,7 +278,7 @@
                         <a href="{{ route('user.profile') }}">My Profile</a>
                         @if(auth()->user()->role === 'user')
                             <a href="{{ route('user.ratings') }}">Ratings</a>
-                            <a href="{{ route('books.bookmarks') }}">Bookmarks</a>
+                            <a href="{{ route('books.bookmarks') }}">Bookmarks / Lists</a>
                             <a href="{{ route('user.following') }}">Following</a>
                             <a href="{{ route('user.publish') }}">Publish a Book</a>
                             <a href="{{ route('user.submissions') }}">My Submissions</a>

@@ -11,7 +11,17 @@ class BookReadController extends Controller
     public function read(Book $book)
     {
         $backUrl = request('back');
-        // Must have an active borrow
+
+        // Comics/Manga: no Google API, redirect to read_url
+        if ($book->isComicOrManga()) {
+            if ($book->read_url) {
+                return redirect()->away($book->read_url);
+            }
+            return redirect()->route('books.show', ['book' => $book->id])
+                ->with('error', 'No reading link available for this comic/manga.');
+        }
+
+        // Books: require active borrow
         $hasBorrowed = BorrowRecord::where('user_id', auth()->id())
             ->where('book_id', $book->id)
             ->whereNull('returned_at')
@@ -22,7 +32,6 @@ class BookReadController extends Controller
                 ->with('error', 'You must borrow this book before you can read it.');
         }
 
-        // Use cached Google Books ID, or look it up now
         $googleBooksId  = $book->google_books_id;
         $webReaderLink  = null;
         $previewLink    = null;
@@ -30,8 +39,6 @@ class BookReadController extends Controller
 
         if (! $googleBooksId) {
             $googleBooksId = $this->lookupGoogleBooksId($book);
-
-            // Cache it on the book so we don't hit the API again
             if ($googleBooksId) {
                 $book->update(['google_books_id' => $googleBooksId]);
             }
@@ -53,11 +60,6 @@ class BookReadController extends Controller
         ));
     }
 
-    /**
-     * Search Google Books API by ISBN first, then title+author as fallback.
-     * No API key required for basic searches (free quota: 1000 requests/day).
-     * Add GOOGLE_BOOKS_API_KEY to .env and config/services.php for higher limits.
-     */
     private function lookupGoogleBooksId(Book $book): ?string
     {
         $apiKey = config('services.google_books.key');
@@ -66,7 +68,6 @@ class BookReadController extends Controller
             $params['key'] = $apiKey;
         }
 
-        // 1. Try ISBN search first (most accurate)
         $isbnClean = preg_replace('/[^0-9X]/', '', strtoupper($book->isbn));
         if ($isbnClean) {
             $params['q'] = 'isbn:' . $isbnClean;
@@ -74,7 +75,6 @@ class BookReadController extends Controller
             if ($result) return $result;
         }
 
-        // 2. Fallback: title + author
         $params['q'] = 'intitle:' . urlencode($book->title) . '+inauthor:' . urlencode($book->author);
         return $this->fetchGoogleBooksVolume($params);
     }
@@ -92,9 +92,8 @@ class BookReadController extends Controller
                 }
             }
         } catch (\Exception $e) {
-            // Silently fail — don't break the page if Google is unreachable
+            // Silently fail
         }
-
         return null;
     }
 }

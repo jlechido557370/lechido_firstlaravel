@@ -57,7 +57,9 @@
             @if(request('search')) matching "<strong>{{ request('search') }}</strong>"@endif
         </p>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px;">
+        {{-- BOOKS SECTION --}}
+        <h2>Books</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; margin-bottom: 32px;">
             @forelse ($books as $book)
                 <a href="{{ route('books.show', ['book' => $book->id, 'back' => request()->fullUrl()]) }}" style="text-decoration: none; color: inherit;">
                     <div style="cursor: pointer; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: white; transition: border-color .15s;"
@@ -71,7 +73,6 @@
                             <div style="font-weight: bold; font-size: 13px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; margin-bottom: 4px;">{{ $book->title }}</div>
                             <div class="muted" style="font-size: 12px; margin-bottom: 6px;">{{ $book->author }}</div>
                             <div>
-                                {{-- Show genre badge. Show type badge only if it differs from genre (avoids "Manga Manga"). --}}
                                 @if($book->genre)
                                     <span class="badge" style="font-size: 11px; margin-right: 2px;">{{ $book->genre }}</span>
                                 @endif
@@ -91,5 +92,29 @@
                 <p style="grid-column: 1/-1;">No books found.</p>
             @endforelse
         </div>
+
+        <hr>
+
+        {{-- COMICS SECTION --}}
+        <h2>Comics</h2>
+        @forelse($comicSeries as $series)
+            <div style="display: inline-block; margin: 8px;">
+                <a href="{{ route('series.show', $series) }}">{{ $series->title }}</a>
+            </div>
+        @empty
+            <p>No comics available.</p>
+        @endforelse
+
+        <hr>
+
+        {{-- MANGA SECTION --}}
+        <h2>Manga</h2>
+        @forelse($mangaSeries as $series)
+            <div style="display: inline-block; margin: 8px;">
+                <a href="{{ route('series.show', $series) }}">{{ $series->title }}</a>
+            </div>
+        @empty
+            <p>No manga available.</p>
+        @endforelse
     </div>
 @endsection

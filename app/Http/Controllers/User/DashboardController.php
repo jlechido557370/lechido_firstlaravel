@@ -37,7 +37,6 @@ class DashboardController extends Controller
             ->where('status', 'pending')
             ->get();
 
-        // All payments (fines + subscriptions) — latest 10 for dashboard preview
         $paymentLogs = Payment::with('borrowRecord.book')
             ->where('user_id', $user->id)
             ->latest()
@@ -64,9 +63,6 @@ class DashboardController extends Controller
         ));
     }
 
-    /**
-     * Dedicated full payment history page.
-     */
     public function paymentHistory()
     {
         $user = auth()->user();
@@ -118,6 +114,11 @@ class DashboardController extends Controller
 
     public function borrowBook(Book $book)
     {
+        // Disallow borrowing for comics/manga
+        if ($book->isComicOrManga()) {
+            return back()->with('error', 'Comics and Manga cannot be borrowed. You can only read them online.');
+        }
+
         $user  = auth()->user();
         $limit = $user->isSubscribed() ? self::MAX_BORROWS_SUB : self::MAX_BORROWS_FREE;
 

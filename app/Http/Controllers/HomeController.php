@@ -4,11 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Book;
 use App\Models\Bookmark;
-use App\Models\BookEditHistory;
 use App\Models\BorrowRecord;
 use App\Models\Reservation;
 use App\Models\User;
 use App\Models\BookReview;
+use App\Models\Series;
+use App\Models\UserList;
 use Illuminate\Http\Request;
 
 class HomeController extends Controller
@@ -58,16 +59,22 @@ class HomeController extends Controller
     public function index()
     {
         $stats = [
-            'total_books'    => Book::count(),
-            'available_books'=> Book::sum('available_copies'),
+            'total_books'    => Book::where('book_type', 'book')->count(),
+            'available_books'=> Book::where('book_type', 'book')->sum('available_copies'),
             'active_borrows' => BorrowRecord::whereNull('returned_at')->count(),
             'members'        => User::where('role', 'user')->count(),
         ];
 
-        $books  = $this->applyFilters(Book::query())->get();
+        // Books only
+        $books = Book::where('book_type', 'book')->get();
+
+        // Comics & Manga series
+        $comicSeries = Series::where('book_type', 'comic')->with('volumes', 'chapters')->get();
+        $mangaSeries = Series::where('book_type', 'manga')->with('volumes', 'chapters')->get();
+
         $genres = Book::select('genre')->distinct()->whereNotNull('genre')->orderBy('genre')->pluck('genre');
 
-        return view('home', compact('stats', 'books', 'genres'));
+        return view('home', compact('stats', 'books', 'comicSeries', 'mangaSeries', 'genres'));
     }
 
     public function show(Book $book)
@@ -140,7 +147,12 @@ class HomeController extends Controller
             ->latest()
             ->get();
 
-        return view('books.bookmarks', compact('bookmarks'));
+        $lists = UserList::where('user_id', auth()->id())
+            ->with('series')
+            ->latest()
+            ->get();
+
+        return view('books.bookmarks', compact('bookmarks', 'lists'));
     }
 
     public function toggleBookmark(Book $book)
@@ -155,6 +167,28 @@ class HomeController extends Controller
 
         Bookmark::create(['user_id' => $userId, 'book_id' => $book->id]);
         return back()->with('success', "Bookmarked \"{$book->title}\".");
+    }
+
+    public function showSeries(Series $series)
+    {
+        $volumes = $series->volumes;
+        $chapters = $series->chapters;
+        $isListed = auth()->check() && UserList::where('user_id', auth()->id())->where('series_id', $series->id)->exists();
+        return view('series.show', compact('series', 'volumes', 'chapters', 'isListed'));
+    }
+
+    public function toggleList(Series $series)
+    {
+        $userId = auth()->id();
+        $existing = UserList::where('user_id', $userId)->where('series_id', $series->id)->first();
+
+        if ($existing) {
+            $existing->delete();
+            return back()->with('success', "Removed \"{$series->title}\" from your list.");
+        }
+
+        UserList::create(['user_id' => $userId, 'series_id' => $series->id]);
+        return back()->with('success', "Added \"{$series->title}\" to your list.");
     }
 
     public function search(Request $request)

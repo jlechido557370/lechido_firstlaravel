@@ -12,6 +12,9 @@ class Book extends Model
         'total_copies', 'available_copies',
         'description', 'read_url', 'google_books_id', 'cover_image',
         'book_type', 'manga_id',
+
+        // NEW
+        'series_id', 'volume_number', 'chapter_number', 'is_series_container',
     ];
 
     protected $casts = [
@@ -19,6 +22,9 @@ class Book extends Model
         'total_copies'     => 'integer',
         'available_copies' => 'integer',
         'genres'           => 'array',
+
+        // OPTIONAL but recommended
+        'is_series_container' => 'boolean',
     ];
 
     public function borrowRecords()  { return $this->hasMany(BorrowRecord::class); }
@@ -26,6 +32,12 @@ class Book extends Model
     public function editHistories()  { return $this->hasMany(BookEditHistory::class)->latest(); }
     public function reservations()   { return $this->hasMany(Reservation::class); }
     public function reviews()        { return $this->hasMany(BookReview::class)->latest(); }
+
+    // NEW RELATION
+    public function series()
+    {
+        return $this->belongsTo(Series::class);
+    }
 
     public function getStatusAttribute(): string
     {
@@ -41,6 +53,22 @@ class Book extends Model
     public function isManga(): bool { return $this->book_type === 'manga'; }
     public function isComic(): bool { return $this->book_type === 'comic'; }
 
+    // NEW HELPERS
+    public function isComicOrManga(): bool
+    {
+        return in_array($this->book_type, ['comic', 'manga']);
+    }
+
+    public function isVolume(): bool
+    {
+        return $this->isComicOrManga() && !is_null($this->volume_number);
+    }
+
+    public function isChapter(): bool
+    {
+        return $this->isComicOrManga() && !is_null($this->chapter_number);
+    }
+
     public function showTypeBadge(): bool
     {
         if ($this->book_type === 'book') return false;
@@ -49,13 +77,6 @@ class Book extends Model
 
     /**
      * Returns a usable cover image URL.
-     * Priority:
-     *   1. Stored cover_image (uploaded file or hardcoded correct URL)
-     *   2. Google Books by volume ID (when google_books_id is manually set)
-     *   3. Open Library by ISBN-13 (most reliable free fallback for manga/comics)
-     *   4. SVG placeholder
-     *
-     * NOTE: Google Books by vid=ISBN was removed — it maps manga ISBNs to wrong books.
      */
     public function coverUrl(): string
     {
@@ -69,14 +90,14 @@ class Book extends Model
             }
         }
 
-        // 2. Google Books API thumbnail by volume ID (set manually on specific books)
+        // 2. Google Books API thumbnail by volume ID
         if ($this->google_books_id) {
             return 'https://books.google.com/books/content?id='
                 . urlencode($this->google_books_id)
                 . '&printsec=frontcover&img=1&zoom=1&source=gbs_api';
         }
 
-        // 3. Open Library by ISBN-13 (more accurate than Google Books by ISBN for manga)
+        // 3. Open Library by ISBN
         $isbn  = $this->isbn_13 ?: $this->isbn_10 ?: $this->isbn;
         $clean = preg_replace('/[^0-9X]/', '', $isbn ?? '');
         if (strlen($clean) >= 10 && is_numeric(rtrim($clean, 'X'))) {

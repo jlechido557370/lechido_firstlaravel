@@ -6,6 +6,7 @@
 @php
     $backTarget = $backUrl ?: route('books.show', ['book' => $book->id]);
 @endphp
+
 <div class="card" style="margin-bottom: 12px;">
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
         <div>
@@ -13,6 +14,7 @@
             <h2 style="margin: 4px 0 2px;">{{ $book->title }}</h2>
             <span class="muted">by {{ $book->author }}</span>
         </div>
+        @if($book->book_type === 'book')
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
             <span class="badge badge-green" style="font-size: 13px; padding: 6px 12px;">Currently Borrowed</span>
             @if($previewLink)
@@ -22,10 +24,23 @@
                 </a>
             @endif
         </div>
+        @endif
     </div>
 </div>
 
-@if($googleFound)
+@if($book->book_type !== 'book')
+    {{-- Comics/Manga: show external link or message --}}
+    <div class="card">
+        <p>This is a <strong>{{ ucfirst($book->book_type) }}</strong>.</p>
+        @if($book->read_url)
+            <a href="{{ $book->read_url }}" target="_blank" class="btn" style="display: inline-block; padding: 10px 20px; background: #15803d; color: white; border-radius: 6px; text-decoration: none;">
+                Read online &nearr;
+            </a>
+        @else
+            <p class="muted">No reading link provided for this {{ $book->book_type }}.</p>
+        @endif
+    </div>
+@elseif($googleFound)
     <div class="card" style="padding: 0; overflow: hidden;">
         <div style="background: #f3f4f6; padding: 10px 14px; border-bottom: 1px solid #e5e7eb; font-size: 13px; color: #6b7280;">
             Powered by Google Books. Not all pages may be available depending on publisher permissions.
@@ -48,6 +63,7 @@
     </div>
 @endif
 
+@if($book->book_type === 'book')
 <div class="card">
     <h3 style="margin-bottom: 12px;">Alternative Reading Sources</h3>
     <p class="muted" style="margin-bottom: 12px; font-size: 13px;">If the preview above is blank or limited, these free resources may have a readable version:</p>
@@ -59,10 +75,11 @@
     </div>
     <p class="muted" style="font-size: 12px; margin-top: 10px;">Availability depends on copyright status. Older books (pre-1928) are typically freely available.</p>
 </div>
+@endif
 @endsection
 
 @push('scripts')
-@if($googleFound)
+@if($book->book_type === 'book' && $googleFound)
 <script src="https://www.google.com/books/jsapi.js"></script>
 <script>
 (function () {
