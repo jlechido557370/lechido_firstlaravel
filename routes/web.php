@@ -67,6 +67,7 @@ Route::middleware(['auth', 'staff'])->prefix('staff')->name('staff.')->group(fun
 Route::middleware('auth')->group(function () {
     // Dashboard & borrowing
     Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('user.dashboard');
+    Route::get('/payment-history', [UserDashboardController::class, 'paymentHistory'])->name('user.payment_history');
     Route::post('/books/{book}/borrow', [UserDashboardController::class, 'borrowBook'])->name('books.borrow');
     Route::post('/borrowings/{borrowing}/return', [UserDashboardController::class, 'returnBook'])->name('user.borrowings.return');
     Route::post('/books/{book}/reserve', [UserDashboardController::class, 'reserveBook'])->name('books.reserve');
@@ -91,7 +92,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('user.avatar.update');
     Route::delete('/profile/avatar', [ProfileController::class, 'removeAvatar'])->name('user.avatar.remove');
 
-    // Payments — show method selection
+    // Payments
     Route::get('/payments/initiate/{borrowing}', [PaymentController::class, 'initiate'])->name('payments.initiate');
     Route::post('/payments/process/{borrowing}', [PaymentController::class, 'process'])->name('payments.process');
     Route::get('/payments/callback', [PaymentController::class, 'callback'])->name('payments.callback');

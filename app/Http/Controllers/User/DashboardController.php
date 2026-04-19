@@ -15,7 +15,7 @@ class DashboardController extends Controller
 {
     const MAX_BORROWS_FREE = 5;
     const MAX_BORROWS_SUB  = 25;
-    const LOAN_DAYS       = 10;
+    const LOAN_DAYS        = 10;
 
     public function index()
     {
@@ -37,9 +37,11 @@ class DashboardController extends Controller
             ->where('status', 'pending')
             ->get();
 
+        // All payments (fines + subscriptions) — latest 10 for dashboard preview
         $paymentLogs = Payment::with('borrowRecord.book')
             ->where('user_id', $user->id)
             ->latest()
+            ->take(10)
             ->get();
 
         $stats = [
@@ -60,6 +62,21 @@ class DashboardController extends Controller
             'stats', 'currentBorrowings', 'borrowingHistory',
             'reservations', 'totalFines', 'paymentLogs'
         ));
+    }
+
+    /**
+     * Dedicated full payment history page.
+     */
+    public function paymentHistory()
+    {
+        $user = auth()->user();
+
+        $payments = Payment::with('borrowRecord.book')
+            ->where('user_id', $user->id)
+            ->latest()
+            ->paginate(20);
+
+        return view('user.payment_history', compact('payments'));
     }
 
     private function generateNotifications(int $userId, $borrowings): void
@@ -101,7 +118,7 @@ class DashboardController extends Controller
 
     public function borrowBook(Book $book)
     {
-        $user = auth()->user();
+        $user  = auth()->user();
         $limit = $user->isSubscribed() ? self::MAX_BORROWS_SUB : self::MAX_BORROWS_FREE;
 
         $activeBorrows = BorrowRecord::where('user_id', $user->id)->whereNull('returned_at')->count();

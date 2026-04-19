@@ -11,8 +11,8 @@ use Illuminate\Support\Facades\Log;
 class SubscriptionController extends Controller
 {
     const FINVERSE_API   = 'https://api.prod.finverse.net';
-    const MONTHLY_PRICE  = 99;   // PHP
-    const YEARLY_PRICE   = 999;  // PHP
+    const MONTHLY_PRICE  = 99;
+    const YEARLY_PRICE   = 999;
 
     const PAYMENT_METHODS = [
         'gcash'          => 'GCash',
@@ -46,23 +46,17 @@ class SubscriptionController extends Controller
         return view('subscription.index', compact('user'));
     }
 
-    /**
-     * Show confirmation page before subscribing.
-     */
     public function confirmPage(Request $request)
     {
         $request->validate(['plan' => ['required', 'in:monthly,yearly']]);
-        $plan        = $request->plan;
-        $amount      = $plan === 'yearly' ? self::YEARLY_PRICE : self::MONTHLY_PRICE;
-        $label       = $plan === 'yearly' ? 'Yearly (12 months)' : 'Monthly (1 month)';
-        $user        = auth()->user();
+        $plan           = $request->plan;
+        $amount         = $plan === 'yearly' ? self::YEARLY_PRICE : self::MONTHLY_PRICE;
+        $label          = $plan === 'yearly' ? 'Yearly (12 months)' : 'Monthly (1 month)';
+        $user           = auth()->user();
         $paymentMethods = self::PAYMENT_METHODS;
         return view('subscription.confirm', compact('plan', 'amount', 'label', 'user', 'paymentMethods'));
     }
 
-    /**
-     * Process subscription after confirmation.
-     */
     public function subscribe(Request $request)
     {
         $request->validate([
@@ -113,15 +107,10 @@ class SubscriptionController extends Controller
             return redirect()->away($paymentUrl);
         }
 
-        // Fallback (cash, bank_transfer, or Finverse not configured)
-        $this->activateSubscription($user, $months, $amount, $request->plan, $paymentMethod);
+        // Fallback: cash, bank_transfer, or Finverse not configured
+        $payment = $this->activateSubscription($user, $months, $amount, $request->plan, $paymentMethod);
 
-        if (in_array($paymentMethod, ['cash', 'bank_transfer'])) {
-            return redirect()->route('subscription.receipt', ['plan' => $request->plan, 'amount' => $amount, 'method' => $paymentMethod])
-                ->with('success', "Subscription activated. Please present your receipt at the library counter.");
-        }
-
-        return redirect()->route('subscription.index')
+        return redirect()->route('payments.receipt', $payment->id)
             ->with('success', "Subscription activated for {$label} plan.");
     }
 
@@ -135,8 +124,8 @@ class SubscriptionController extends Controller
         $amount = $plan === 'yearly' ? self::YEARLY_PRICE : self::MONTHLY_PRICE;
 
         if ($status === 'success' || $status === 'completed') {
-            $this->activateSubscription($user, $months, $amount, $plan, $method);
-            return redirect()->route('subscription.receipt', ['plan' => $plan, 'amount' => $amount, 'method' => $method])
+            $payment = $this->activateSubscription($user, $months, $amount, $plan, $method);
+            return redirect()->route('payments.receipt', $payment->id)
                 ->with('success', 'Subscription activated successfully.');
         }
 
@@ -167,24 +156,23 @@ class SubscriptionController extends Controller
     }
 
     /**
-     * Show a printable receipt after successful subscription.
+     * Legacy receipt route (kept for direct URL access).
+     * Used when no payment ID is available (e.g., old links).
      */
     public function receipt(Request $request)
     {
-        $user   = auth()->user();
-        $plan   = $request->get('plan', 'monthly');
-        $amount = $request->get('amount', $plan === 'yearly' ? self::YEARLY_PRICE : self::MONTHLY_PRICE);
-        $method = $request->get('method', 'N/A');
-        $label  = $plan === 'yearly' ? 'Yearly (12 months)' : 'Monthly (1 month)';
+        $user        = auth()->user();
+        $plan        = $request->get('plan', 'monthly');
+        $amount      = $request->get('amount', $plan === 'yearly' ? self::YEARLY_PRICE : self::MONTHLY_PRICE);
+        $method      = $request->get('method', 'N/A');
+        $label       = $plan === 'yearly' ? 'Yearly (12 months)' : 'Monthly (1 month)';
         $methodLabel = self::PAYMENT_METHODS[$method] ?? ucfirst($method);
-        $expiresAt = $user->subscription_expires_at;
+        $expiresAt   = $user->subscription_expires_at;
+        $payment     = null;
 
-        return view('subscription.receipt', compact('user', 'plan', 'label', 'amount', 'method', 'methodLabel', 'expiresAt'));
+        return view('subscription.receipt', compact('user', 'plan', 'label', 'amount', 'method', 'methodLabel', 'expiresAt', 'payment'));
     }
 
-    /**
-     * Cancel subscription.
-     */
     public function cancel(Request $request)
     {
         $user = auth()->user();
@@ -211,7 +199,11 @@ class SubscriptionController extends Controller
             ->with('success', 'Your subscription has been cancelled.');
     }
 
-    private function activateSubscription(\App\Models\User $user, int $months, float $amount, string $plan, string $paymentMethod): void
+    /**
+     * Activate subscription, create Payment record, fire notifications.
+     * Returns the created Payment so callers can redirect to its receipt.
+     */
+    private function activateSubscription(\App\Models\User $user, int $months, float $amount, string $plan, string $paymentMethod): Payment
     {
         $expiresAt = $user->subscription_expires_at && $user->subscription_expires_at->isFuture()
             ? $user->subscription_expires_at->addMonths($months)
@@ -225,6 +217,18 @@ class SubscriptionController extends Controller
             'subscription_paid_at'    => now(),
         ]);
 
+        // Store payment record for payment history & receipt access
+        $payment = Payment::create([
+            'user_id'                 => $user->id,
+            'type'                    => 'subscription',
+            'amount'                  => $amount,
+            'status'                  => 'completed',
+            'paid_at'                 => now(),
+            'payment_method'          => $paymentMethod,
+            'subscription_plan'       => $plan,
+            'subscription_expires_at' => $expiresAt,
+        ]);
+
         UserNotification::create([
             'user_id' => $user->id,
             'type'    => 'subscription_activated',
@@ -232,5 +236,7 @@ class SubscriptionController extends Controller
         ]);
 
         ActivityLog::record('subscription_activated', $user->displayName() . " activated subscription until {$expiresAt->format('M d, Y')}.");
+
+        return $payment;
     }
 }

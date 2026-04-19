@@ -1,16 +1,15 @@
 <?php
+
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Book extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
-        'title', 'author', 'isbn', 'isbn_13', 'isbn_10', 'genre', 'genres',
-        'published_year', 'total_copies', 'available_copies',
+        'title', 'author', 'genre', 'genres', 'published_year',
+        'isbn', 'isbn_13', 'isbn_10',
+        'total_copies', 'available_copies',
         'description', 'read_url', 'google_books_id', 'cover_image',
         'book_type', 'manga_id',
     ];
@@ -42,10 +41,6 @@ class Book extends Model
     public function isManga(): bool { return $this->book_type === 'manga'; }
     public function isComic(): bool { return $this->book_type === 'comic'; }
 
-    /**
-     * Whether to show a separate type badge alongside the genre badge.
-     * Returns false when genre already represents the type (manga = Manga, comic = Comic).
-     */
     public function showTypeBadge(): bool
     {
         if ($this->book_type === 'book') return false;
@@ -54,7 +49,13 @@ class Book extends Model
 
     /**
      * Returns a usable cover image URL.
-     * Priority: stored cover → Google Books → Open Library by ISBN → SVG placeholder
+     * Priority:
+     *   1. Stored cover_image (uploaded file or hardcoded correct URL)
+     *   2. Google Books by volume ID (when google_books_id is manually set)
+     *   3. Open Library by ISBN-13 (most reliable free fallback for manga/comics)
+     *   4. SVG placeholder
+     *
+     * NOTE: Google Books by vid=ISBN was removed — it maps manga ISBNs to wrong books.
      */
     public function coverUrl(): string
     {
@@ -68,27 +69,24 @@ class Book extends Model
             }
         }
 
-        // 2. Google Books API thumbnail
+        // 2. Google Books API thumbnail by volume ID (set manually on specific books)
         if ($this->google_books_id) {
             return 'https://books.google.com/books/content?id='
                 . urlencode($this->google_books_id)
                 . '&printsec=frontcover&img=1&zoom=1&source=gbs_api';
         }
 
-        // 3. Open Library by real ISBN (skip fake MANGA-xxx / COMIC-xxx ISBNs)
-        $isbn = $this->isbn_13 ?: $this->isbn_10 ?: $this->isbn;
+        // 3. Open Library by ISBN-13 (more accurate than Google Books by ISBN for manga)
+        $isbn  = $this->isbn_13 ?: $this->isbn_10 ?: $this->isbn;
         $clean = preg_replace('/[^0-9X]/', '', $isbn ?? '');
         if (strlen($clean) >= 10 && is_numeric(rtrim($clean, 'X'))) {
             return 'https://covers.openlibrary.org/b/isbn/' . $clean . '-L.jpg';
         }
 
-        // 4. SVG "image not available" placeholder — no external request, always works
+        // 4. SVG placeholder
         return $this->noImageSvg();
     }
 
-    /**
-     * Returns a data URI SVG for when no cover exists.
-     */
     public function noImageSvg(): string
     {
         $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="190">'
@@ -100,9 +98,6 @@ class Book extends Model
         return 'data:image/svg+xml;base64,' . base64_encode($svg);
     }
 
-    /**
-     * Returns both ISBN-13 and ISBN-10 for display, deriving from isbn field if needed.
-     */
     public function getIsbnDisplayAttribute(): array
     {
         $isbn13 = $this->isbn_13;

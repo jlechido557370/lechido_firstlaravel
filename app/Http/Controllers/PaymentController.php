@@ -99,6 +99,7 @@ class PaymentController extends Controller
         $payment = Payment::create([
             'user_id'           => $user->id,
             'borrow_record_id'  => $borrowing->id,
+            'type'              => 'fine',
             'amount'            => $fine,
             'status'            => 'pending',
             'finverse_link_id'  => $linkId,
@@ -121,9 +122,6 @@ class PaymentController extends Controller
         return view('payments.confirm', compact('payment', 'borrowing', 'fine', 'paymentMethods'));
     }
 
-    /**
-     * Handle the payment method form submission from the confirm page.
-     */
     public function process(Request $request, BorrowRecord $borrowing)
     {
         $request->validate([
@@ -148,6 +146,7 @@ class PaymentController extends Controller
             $payment = Payment::create([
                 'user_id'          => $user->id,
                 'borrow_record_id' => $borrowing->id,
+                'type'             => 'fine',
                 'amount'           => $fine,
                 'status'           => 'pending',
             ]);
@@ -155,13 +154,11 @@ class PaymentController extends Controller
 
         $payment->update(['payment_method' => $request->payment_method]);
 
-        // For cash/bank_transfer, mark complete immediately and show receipt
         if (in_array($request->payment_method, ['cash', 'bank_transfer'])) {
             $this->markPaymentComplete($payment, ['payment_method' => $request->payment_method]);
             return redirect()->route('payments.receipt', $payment->id);
         }
 
-        // For online methods (gcash, maya) — attempt Finverse or fall back to receipt
         $accessToken = $this->getAccessToken();
         if ($accessToken) {
             try {
@@ -187,13 +184,14 @@ class PaymentController extends Controller
             }
         }
 
-        // Finverse not available — treat same as cash
+        // Finverse not available — complete immediately and show receipt
         $this->markPaymentComplete($payment, ['payment_method' => $request->payment_method]);
         return redirect()->route('payments.receipt', $payment->id);
     }
 
     /**
-     * Show the payment receipt page (with popup modal).
+     * Show the receipt page.
+     * Handles BOTH fine payments and subscription payments.
      */
     public function receipt(Payment $payment)
     {
@@ -201,6 +199,22 @@ class PaymentController extends Controller
             return back()->with('error', 'Unauthorized.');
         }
 
+        // ── Subscription receipt ──────────────────────────────────────────────
+        if ($payment->type === 'subscription') {
+            $user        = auth()->user();
+            $plan        = $payment->subscription_plan ?? 'monthly';
+            $label       = $plan === 'yearly' ? 'Yearly (12 months)' : 'Monthly (1 month)';
+            $amount      = $payment->amount;
+            $method      = $payment->payment_method ?? 'N/A';
+            $methodLabel = SubscriptionController::PAYMENT_METHODS[$method] ?? ucfirst($method);
+            $expiresAt   = $payment->subscription_expires_at;
+
+            return view('subscription.receipt', compact(
+                'payment', 'user', 'plan', 'label', 'amount', 'method', 'methodLabel', 'expiresAt'
+            ));
+        }
+
+        // ── Fine payment receipt ──────────────────────────────────────────────
         $borrowing   = $payment->borrowRecord;
         $methodLabel = self::PAYMENT_METHODS[$payment->payment_method ?? ''] ?? ucfirst($payment->payment_method ?? 'N/A');
 
