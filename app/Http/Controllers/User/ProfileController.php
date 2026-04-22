@@ -36,8 +36,9 @@ class ProfileController extends Controller
             ->latest()->take(6)->get();
 
         $isFollowing = auth()->check() ? auth()->user()->isFollowing($user) : false;
+        $isBlocking  = auth()->check() ? auth()->user()->isBlocking($user) : false;
 
-        return view('user.public_profile', compact('user', 'borrowCount', 'ratings', 'isFollowing'));
+        return view('user.public_profile', compact('user', 'borrowCount', 'ratings', 'isFollowing', 'isBlocking'));
     }
 
     public function ratings()
@@ -64,13 +65,16 @@ class ProfileController extends Controller
         $user = auth()->user();
 
         $data = $request->validate([
-            'name'           => ['required', 'string', 'max:255'],
-            'username'       => ['required', 'string', 'min:3', 'max:30', 'regex:/^[a-zA-Z0-9_]+$/', Rule::unique('users')->ignore($user->id)],
-            'email'          => ['required', 'email', Rule::unique('users')->ignore($user->id)],
-            'bio'            => ['nullable', 'string', 'max:500'],
-            'gender'         => ['nullable', Rule::in(['male', 'female', 'prefer_not_to_say'])],
-            'allow_dms'      => ['boolean'],
-            'hide_real_name' => ['boolean'],
+            'name'               => ['required', 'string', 'max:255'],
+            'username'           => ['required', 'string', 'min:3', 'max:30', 'regex:/^[a-zA-Z0-9_]+$/', Rule::unique('users')->ignore($user->id)],
+            'email'              => ['required', 'email', Rule::unique('users')->ignore($user->id)],
+            'bio'                => ['nullable', 'string', 'max:500'],
+            'gender'             => ['nullable', Rule::in(['male', 'female', 'prefer_not_to_say'])],
+            'allow_dms'          => ['nullable', 'boolean'],
+            'hide_real_name'     => ['nullable', 'boolean'],
+            'phone_country_code' => ['nullable', 'string', 'max:10'],
+            'phone_area_code'    => ['nullable', 'string', 'max:10'],
+            'phone_number'       => ['nullable', 'string', 'max:20'],
         ]);
 
         $data['allow_dms']      = $request->has('allow_dms');
@@ -78,7 +82,7 @@ class ProfileController extends Controller
 
         $user->update($data);
 
-        return back()->with('success', 'Profile updated successfully.');
+        return redirect()->route('user.profile')->with('success', 'Profile updated successfully.');
     }
 
     public function updateAvatar(Request $request)

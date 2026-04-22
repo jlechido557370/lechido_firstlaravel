@@ -8,8 +8,6 @@ use App\Models\BorrowRecord;
 use App\Models\Reservation;
 use App\Models\User;
 use App\Models\BookReview;
-use App\Models\Series;
-use App\Models\UserList;
 use Illuminate\Http\Request;
 
 class HomeController extends Controller
@@ -32,8 +30,8 @@ class HomeController extends Controller
             $query->where('genre', $genre);
         }
 
-        if ($type = request('type')) {
-            $query->where('book_type', $type);
+        if (($type = request('type')) === 'book') {
+            $query->where('book_type', 'book');
         }
 
         if ($availability = request('availability')) {
@@ -59,22 +57,23 @@ class HomeController extends Controller
     public function index()
     {
         $stats = [
-            'total_books'    => Book::where('book_type', 'book')->count(),
-            'available_books'=> Book::where('book_type', 'book')->sum('available_copies'),
-            'active_borrows' => BorrowRecord::whereNull('returned_at')->count(),
-            'members'        => User::where('role', 'user')->count(),
+            'total_books'     => Book::where('book_type', 'book')->count(),
+            'available_books' => Book::where('book_type', 'book')->sum('available_copies'),
+            'active_borrows'  => BorrowRecord::whereNull('returned_at')->count(),
+            'members'         => User::where('role', 'user')->count(),
         ];
 
-        // Books only
-        $books = Book::where('book_type', 'book')->get();
+        $booksQuery = $this->applyFilters(Book::where('book_type', 'book'));
+        $books = $booksQuery->get();
+        $genres = Book::select('genre')
+            ->distinct()
+            ->whereNotNull('genre')
+            ->whereNotIn('genre', ['Manga', 'Comic'])
+            ->where('book_type', 'book')
+            ->orderBy('genre')
+            ->pluck('genre');
 
-        // Comics & Manga series
-        $comicSeries = Series::where('book_type', 'comic')->with('volumes', 'chapters')->get();
-        $mangaSeries = Series::where('book_type', 'manga')->with('volumes', 'chapters')->get();
-
-        $genres = Book::select('genre')->distinct()->whereNotNull('genre')->orderBy('genre')->pluck('genre');
-
-        return view('home', compact('stats', 'books', 'comicSeries', 'mangaSeries', 'genres'));
+        return view('home', compact('stats', 'books', 'genres'));
     }
 
     public function show(Book $book)
@@ -128,14 +127,25 @@ class HomeController extends Controller
 
     public function catalogue()
     {
-        $genres = Book::select('genre')->distinct()->whereNotNull('genre')->orderBy('genre')->pluck('genre');
+        $excludedGenres = ['Manga', 'Comic'];
+
+        $genres = Book::select('genre')
+            ->distinct()
+            ->whereNotNull('genre')
+            ->whereNotIn('genre', $excludedGenres)
+            ->where('book_type', 'book')
+            ->orderBy('genre')
+            ->pluck('genre');
 
         $byGenre = [];
         foreach ($genres as $genre) {
-            $byGenre[$genre] = Book::where('genre', $genre)->latest()->get();
+            $byGenre[$genre] = Book::where('genre', $genre)
+                ->where('book_type', 'book')
+                ->latest()
+                ->get();
         }
 
-        $totalBooks = Book::count();
+        $totalBooks = Book::where('book_type', 'book')->count();
 
         return view('books.catalogue', compact('genres', 'byGenre', 'totalBooks'));
     }
@@ -147,12 +157,7 @@ class HomeController extends Controller
             ->latest()
             ->get();
 
-        $lists = UserList::where('user_id', auth()->id())
-            ->with('series')
-            ->latest()
-            ->get();
-
-        return view('books.bookmarks', compact('bookmarks', 'lists'));
+        return view('books.bookmarks', compact('bookmarks'));
     }
 
     public function toggleBookmark(Book $book)
@@ -169,28 +174,6 @@ class HomeController extends Controller
         return back()->with('success', "Bookmarked \"{$book->title}\".");
     }
 
-    public function showSeries(Series $series)
-    {
-        $volumes = $series->volumes;
-        $chapters = $series->chapters;
-        $isListed = auth()->check() && UserList::where('user_id', auth()->id())->where('series_id', $series->id)->exists();
-        return view('series.show', compact('series', 'volumes', 'chapters', 'isListed'));
-    }
-
-    public function toggleList(Series $series)
-    {
-        $userId = auth()->id();
-        $existing = UserList::where('user_id', $userId)->where('series_id', $series->id)->first();
-
-        if ($existing) {
-            $existing->delete();
-            return back()->with('success', "Removed \"{$series->title}\" from your list.");
-        }
-
-        UserList::create(['user_id' => $userId, 'series_id' => $series->id]);
-        return back()->with('success', "Added \"{$series->title}\" to your list.");
-    }
-
     public function search(Request $request)
     {
         $q = trim((string) $request->input('q', ''));
@@ -200,6 +183,8 @@ class HomeController extends Controller
 
         if ($q !== '') {
             $books = Book::query()
+                ->where('book_type', 'book')
+                ->whereNotIn('genre', ['Manga', 'Comic'])
                 ->where(function ($query) use ($q) {
                     $query->where('title', 'like', "%{$q}%")
                         ->orWhere('author', 'like', "%{$q}%")
@@ -215,8 +200,13 @@ class HomeController extends Controller
 
             $users = User::query()
                 ->where(function ($query) use ($q) {
-                    $query->where('name', 'like', "%{$q}%")
-                        ->orWhere('bio', 'like', "%{$q}%");
+                    $query->where('username', 'like', "%{$q}%")
+                        ->orWhere('bio', 'like', "%{$q}%")
+                        ->orWhere(function ($q2) use ($q) {
+                            // Only match on real name if the user hasn't hidden it
+                            $q2->where('hide_real_name', false)
+                               ->where('name', 'like', "%{$q}%");
+                        });
                 })
                 ->latest()
                 ->take(25)

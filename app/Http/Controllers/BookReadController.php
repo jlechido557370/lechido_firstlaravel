@@ -12,16 +12,6 @@ class BookReadController extends Controller
     {
         $backUrl = request('back');
 
-        // Comics/Manga: no Google API, redirect to read_url
-        if ($book->isComicOrManga()) {
-            if ($book->read_url) {
-                return redirect()->away($book->read_url);
-            }
-            return redirect()->route('books.show', ['book' => $book->id])
-                ->with('error', 'No reading link available for this comic/manga.');
-        }
-
-        // Books: require active borrow
         $hasBorrowed = BorrowRecord::where('user_id', auth()->id())
             ->where('book_id', $book->id)
             ->whereNull('returned_at')
@@ -72,7 +62,9 @@ class BookReadController extends Controller
         if ($isbnClean) {
             $params['q'] = 'isbn:' . $isbnClean;
             $result = $this->fetchGoogleBooksVolume($params);
-            if ($result) return $result;
+            if ($result) {
+                return $result;
+            }
         }
 
         $params['q'] = 'intitle:' . urlencode($book->title) . '+inauthor:' . urlencode($book->author);
@@ -94,6 +86,7 @@ class BookReadController extends Controller
         } catch (\Exception $e) {
             // Silently fail
         }
+
         return null;
     }
 }

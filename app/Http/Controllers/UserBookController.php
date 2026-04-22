@@ -1,15 +1,14 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\AuthorFollow;
 use App\Models\Book;
 use App\Models\Follow;
-use App\Models\Series; // NEW
 use App\Models\UserBook;
 use App\Models\UserNotification;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class UserBookController extends Controller
 {
@@ -54,8 +53,8 @@ class UserBookController extends Controller
             'description'    => ['nullable', 'string', 'max:5000'],
             'read_url'       => ['nullable', 'url', 'max:500'],
             'cover_image'    => ['nullable', 'image', 'mimes:jpg,jpeg,png,gif,webp', 'max:3072'],
-            'book_type'      => ['nullable', 'in:book,manga,comic'],
-            'manga_cover_url'=> ['nullable', 'url', 'max:500'],
+            'genres'         => ['required', 'array', 'min:1'],
+            'genres.*'       => ['string', 'max:50'],
         ]);
 
         if (empty($primaryGenre)) {
@@ -65,8 +64,6 @@ class UserBookController extends Controller
         $coverPath = null;
         if ($request->hasFile('cover_image')) {
             $coverPath = $request->file('cover_image')->store('book-covers', 'public');
-        } elseif ($request->filled('manga_cover_url')) {
-            $coverPath = $request->manga_cover_url;
         }
 
         UserBook::create([
@@ -80,7 +77,7 @@ class UserBookController extends Controller
             'description'    => $data['description'] ?? null,
             'read_url'       => $data['read_url'] ?? null,
             'cover_image'    => $coverPath,
-            'book_type'      => $data['book_type'] ?? 'book',
+            'book_type'      => 'book',
             'status'         => 'pending',
         ]);
 
@@ -93,59 +90,6 @@ class UserBookController extends Controller
     {
         if (!auth()->user()->isAdminOrStaff()) abort(403);
 
-        // Comics / Manga → create Series
-        if (in_array($userBook->book_type, ['comic', 'manga'])) {
-            $series = Series::create([
-                'title'       => $userBook->title,
-                'author'      => $userBook->author,
-                'book_type'   => $userBook->book_type,
-                'description' => $userBook->description,
-                'cover_image' => $userBook->cover_image,
-                'genres'      => $userBook->genres ?? [$userBook->genre],
-            ]);
-
-            $userBook->update([
-                'status'      => 'approved',
-                'reviewed_by' => auth()->id(),
-                'reviewed_at' => now(),
-            ]);
-
-            UserNotification::create([
-                'user_id' => $userBook->user_id,
-                'type'    => 'book_approved',
-                'message' => "Your comic/manga \"{$userBook->title}\" has been approved as a series.",
-            ]);
-
-            $submitter = $userBook->user;
-            if ($submitter) {
-                $followerIds = Follow::where('following_id', $submitter->id)->pluck('follower_id');
-                foreach ($followerIds as $followerId) {
-                    if ($followerId !== $userBook->user_id) {
-                        UserNotification::create([
-                            'user_id' => $followerId,
-                            'type'    => 'followed_user_published',
-                            'message' => $submitter->displayName() . " published a new series: \"{$userBook->title}\".",
-                        ]);
-                    }
-                }
-            }
-
-            $authorFollowerIds = AuthorFollow::where('author_name', $userBook->author)->pluck('user_id');
-            foreach ($authorFollowerIds as $uid) {
-                if ($uid !== $userBook->user_id) {
-                    UserNotification::create([
-                        'user_id' => $uid,
-                        'type'    => 'followed_author_published',
-                        'message' => "Author \"{$userBook->author}\" has a new series: \"{$userBook->title}\".",
-                    ]);
-                }
-            }
-
-            ActivityLog::record('book_submission_approved', auth()->user()->displayName() . " approved series: {$userBook->title}");
-            return back()->with('success', "Series \"{$userBook->title}\" approved and published.");
-        }
-
-        // Normal Book
         $book = Book::create([
             'title'            => $userBook->title,
             'author'           => $userBook->author,
@@ -158,7 +102,7 @@ class UserBookController extends Controller
             'description'      => $userBook->description,
             'read_url'         => $userBook->read_url,
             'cover_image'      => $userBook->cover_image,
-            'book_type'        => $userBook->book_type ?? 'book',
+            'book_type'        => 'book',
         ]);
 
         $userBook->update([

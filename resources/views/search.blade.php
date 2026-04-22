@@ -60,7 +60,10 @@
                 <tbody>
                     @foreach($users as $user)
                         <tr>
-                            <td><a href="{{ route('user.public_profile', $user->id) }}">{{ $user->name }}</a></td>
+                            <td>
+                                <a href="{{ route('user.public_profile', $user->id) }}">{{ $user->displayName() }}</a>
+                                @if($user->username)<span class="muted" style="font-size:12px;font-family:var(--font-mono);"> {{ $user->username }}</span>@endif
+                            </td>
                             <td>{{ ucfirst($user->role) }}</td>
                             <td>{{ $user->bio ?: '—' }}</td>
                         </tr>

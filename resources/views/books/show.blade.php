@@ -26,52 +26,28 @@
                  onerror="this.onerror=null; this.src='{{ $book->noImageSvg() }}'">
 
             <div style="flex: 1; min-width: 200px;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
-                    <div>
-                        <h1 style="margin-bottom: 4px;">{{ $book->title }}</h1>
-                        <p class="muted" style="font-size: 16px; margin-bottom: 12px;">by <strong>{{ $book->author }}</strong></p>
-                        <div style="display: flex; flex-wrap: wrap; gap: 4px;">
-                            @if($book->genre)
-                                <span class="badge">{{ $book->genre }}</span>
-                            @endif
-                            @if($book->showTypeBadge())
-                                <span class="badge" style="background: #e0e7ff;">{{ ucfirst($book->book_type) }}</span>
-                            @endif
-                            <span class="badge {{ $book->status === 'available' ? 'badge-green' : 'badge-red' }}">
-                                {{ ucfirst($book->status) }}
+                <h1 style="margin-bottom: 4px;">{{ $book->title }}</h1>
+                <p class="muted" style="font-size: 16px; margin-bottom: 12px;">
+                    by <strong>{{ $book->author }}</strong>
+                </p>
+
+                <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                    @if($book->genre)
+                        <span class="badge">{{ $book->genre }}</span>
+                    @endif
+
+                    <span class="badge {{ $book->status === 'available' ? 'badge-green' : 'badge-red' }}">
+                        {{ ucfirst($book->status) }}
+                    </span>
+
+                    @if($avgRating)
+                        <span class="badge" style="background: #fef9c3;">
+                            &#9733; {{ $avgRating }} / 5
+                            <span class="muted" style="font-size: 11px;">
+                                ({{ $reviews->count() }} {{ Str::plural('review', $reviews->count()) }})
                             </span>
-                            @if($avgRating)
-                                <span class="badge" style="background: #fef9c3;">
-                                    &#9733; {{ $avgRating }} / 5
-                                    <span class="muted" style="font-size: 11px;">({{ $reviews->count() }} {{ Str::plural('review', $reviews->count()) }})</span>
-                                </span>
-                            @endif
-                        </div>
-                    </div>
-
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        @auth
-                            @if(auth()->user()->role === 'user')
-                                {{-- Bookmark button only for books --}}
-                                @if($book->book_type === 'book')
-                                    <form method="POST" action="{{ route('books.bookmark', $book->id) }}" style="margin: 0;">
-                                        @csrf
-                                        <button type="submit" style="width: auto; padding: 8px 16px; background: {{ $isBookmarked ? '#374151' : '#111827' }};">
-                                            {{ $isBookmarked ? 'Bookmarked' : 'Bookmark' }}
-                                        </button>
-                                    </form>
-                                @endif
-                            @endif
-                        @endauth
-
-                        {{-- Read button only for books that are borrowed --}}
-                        @if($canRead && $book->book_type === 'book')
-                            <a href="{{ route('books.read', ['book' => $book->id, 'back' => $currentUrl]) }}"
-                               style="display: inline-block; padding: 8px 16px; background: #15803d; color: white; border-radius: 6px; text-decoration: none; font-size: 14px;">
-                                Read Book Online
-                            </a>
-                        @endif
-                    </div>
+                        </span>
+                    @endif
                 </div>
 
                 <table style="width: auto; margin: 16px 0;">
@@ -79,22 +55,21 @@
                         <td style="padding: 4px 20px 4px 0; color: #6b7280;">Published</td>
                         <td>{{ $book->published_year }}</td>
                     </tr>
+
                     @if($isbnDisplay['isbn_13'])
                     <tr>
                         <td style="color: #6b7280;">ISBN-13</td>
                         <td style="font-family: monospace;">{{ $isbnDisplay['isbn_13'] }}</td>
                     </tr>
                     @endif
+
                     @if($isbnDisplay['isbn_10'])
                     <tr>
                         <td style="color: #6b7280;">ISBN-10</td>
                         <td style="font-family: monospace;">{{ $isbnDisplay['isbn_10'] }}</td>
                     </tr>
                     @endif
-                    <tr>
-                        <td style="color: #6b7280;">Type</td>
-                        <td>{{ ucfirst($book->book_type ?? 'book') }}</td>
-                    </tr>
+
                     <tr>
                         <td style="color: #6b7280;">Copies Available</td>
                         <td>{{ $book->available_copies }} / {{ $book->total_copies }}</td>
@@ -104,180 +79,160 @@
         </div>
 
         @if($book->description)
-            <p style="line-height: 1.7; margin-bottom: 20px;">{{ $book->description }}</p>
+            <p style="line-height: 1.7; margin-bottom: 20px;">
+                {{ $book->description }}
+            </p>
         @endif
 
         @auth
             @if(auth()->user()->role === 'user')
-                {{-- Borrow/Reserve logic only for books --}}
-                @if($book->book_type === 'book')
-                    @if($alreadyBorrowed)
-                        <p><span class="badge" style="font-size: 14px; padding: 8px 14px;">You currently have this book borrowed</span></p>
-                    @elseif($book->available_copies > 0 && !$atLimit)
-                        <form method="POST" action="{{ route('books.borrow', $book->id) }}" style="display: inline;">
-                            @csrf
-                            <button type="submit" style="width: auto; padding: 10px 24px;">Borrow this Book</button>
-                        </form>
-                    @elseif($atLimit && $book->available_copies > 0)
-                        @if(!auth()->user()->isSubscribed())
-                            <p class="muted">You have reached the 5-book free limit. <a href="{{ route('subscription.index') }}">Subscribe</a> to borrow up to 25 books.</p>
-                        @else
-                            <p class="muted">You have reached the 25-book limit. Return a book first.</p>
-                        @endif
-                    @elseif($book->available_copies <= 0 && !$alreadyReserved)
-                        <form method="POST" action="{{ route('books.reserve', $book->id) }}" style="display: inline;">
-                            @csrf
-                            <button type="submit" style="width: auto; padding: 10px 24px;">Reserve this Book</button>
-                        </form>
-                        <p class="muted" style="margin-top: 8px; font-size: 13px;">No copies available — reserve to be notified when one is.</p>
-                    @elseif($alreadyReserved)
-                        <p><span class="badge" style="font-size: 14px; padding: 8px 14px;">You have already reserved this book</span></p>
-                    @endif
-                @else
-                    <p class="muted">Comics and Manga cannot be borrowed. You can only read them online.</p>
+
+                {{-- Bookmark --}}
+                <form method="POST" action="{{ route('books.bookmark', $book->id) }}" style="display:inline;">
+                    @csrf
+                    <button type="submit" style="padding:8px 16px;">
+                        {{ $isBookmarked ? 'Bookmarked' : 'Bookmark' }}
+                    </button>
+                </form>
+
+                {{-- Read --}}
+                @if($canRead)
+                    <a href="{{ route('books.read', ['book' => $book->id, 'back' => $currentUrl]) }}"
+                       style="padding:8px 16px; background:#15803d; color:white; border-radius:6px; text-decoration:none;">
+                        Read Book Online
+                    </a>
                 @endif
+
+                {{-- Borrow / Reserve --}}
+                <div style="margin-top:12px;">
+                    @if($alreadyBorrowed)
+                        <span class="badge">You currently have this book borrowed</span>
+
+                    @elseif($book->available_copies > 0 && !$atLimit)
+                        <form method="POST" action="{{ route('books.borrow', $book->id) }}">
+                            @csrf
+                            <button type="submit">Borrow this Book</button>
+                        </form>
+
+                    @elseif($atLimit)
+                        <p class="muted">Borrowing limit reached.</p>
+
+                    @elseif($book->available_copies <= 0 && !$alreadyReserved)
+                        <form method="POST" action="{{ route('books.reserve', $book->id) }}">
+                            @csrf
+                            <button type="submit">Reserve this Book</button>
+                        </form>
+
+                    @elseif($alreadyReserved)
+                        <span class="badge">Already reserved</span>
+                    @endif
+                </div>
+
             @endif
         @else
             <p class="muted">
-                <a href="{{ route('login') }}">Login</a> or <a href="{{ route('register') }}">Register</a> to borrow or reserve this book.
+                <a href="{{ route('login') }}">Login</a> or
+                <a href="{{ route('register') }}">Register</a>
             </p>
         @endauth
     </div>
 
-    {{-- RATINGS & REVIEWS SECTION (shown for all book types) --}}
+    {{-- REVIEWS & RATING --}}
     @auth
+        @if(auth()->user()->role === 'user')
         <div class="card">
-            <h2 style="margin-bottom: 16px;">Ratings &amp; Reviews</h2>
+            <h2>Ratings &amp; Reviews</h2>
 
-            @if(auth()->user()->role === 'user')
-                <div style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #e5e7eb;">
-                    <h3 style="margin-bottom: 10px; font-size: 15px;">{{ $userReview ? 'Edit Your Review' : 'Leave a Review' }}</h3>
-                    <form method="POST" action="{{ route('books.reviews.store', $book->id) }}">
-                        @csrf
-                        <div style="margin-bottom: 12px;">
-                            <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px;">Your Rating</label>
-                            <div id="star-rating" style="display: flex; gap: 6px;">
-                                @for($i = 1; $i <= 5; $i++)
-                                    <label style="cursor: pointer; font-size: 28px; color: {{ ($userReview && $userReview->rating >= $i) ? '#f59e0b' : '#d1d5db' }};"
-                                           id="star-label-{{ $i }}"
-                                           onmouseover="hoverStars({{ $i }})"
-                                           onmouseout="resetStars()">
-                                        <input type="radio" name="rating" value="{{ $i }}"
-                                               {{ ($userReview && $userReview->rating == $i) ? 'checked' : '' }}
-                                               style="display: none;"
-                                               onchange="selectStar({{ $i }})">
-                                        &#9733;
-                                    </label>
-                                @endfor
+            {{-- Existing reviews --}}
+            @if($reviews->isEmpty())
+                <p class="muted" style="margin-bottom:20px;">No reviews yet. Be the first!</p>
+            @else
+                <div style="margin-bottom:24px;">
+                    @foreach($reviews as $review)
+                        <div style="display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--mid);">
+                            <img src="{{ $review->user?->avatarUrl() }}" alt="" style="width:36px;height:36px;object-fit:cover;border-radius:50%;border:1px solid var(--border);flex-shrink:0;">
+                            <div style="flex:1;">
+                                <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap;">
+                                    <strong style="font-size:14px;color:var(--black);">{{ $review->user?->name ?? 'User' }}</strong>
+                                    <span style="font-size:15px;letter-spacing:1px;">
+                                        @for($i=1;$i<=5;$i++)
+                                            <span style="color:{{ $review->rating >= $i ? '#f59e0b' : 'var(--mid)' }};">★</span>
+                                        @endfor
+                                    </span>
+                                    <span style="font-size:11px;color:var(--muted);font-family:var(--font-mono);">{{ $review->created_at->format('M d, Y') }}</span>
+                                </div>
+                                @if($review->comment)
+                                    <p style="font-size:14px;color:var(--black);line-height:1.6;margin:0;">{{ $review->comment }}</p>
+                                @endif
+                                @if(auth()->id() === $review->user_id)
+                                    <form method="POST" action="{{ route('books.reviews.destroy', $book->id) }}" style="margin-top:6px;display:inline;">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="btn-outline" style="font-size:11px;padding:3px 10px;color:var(--muted);border-color:var(--border);" onclick="return confirm('Remove your review?')">Remove</button>
+                                    </form>
+                                @endif
                             </div>
-                            @error('rating') <p style="color: #dc2626; font-size: 13px; margin-top: 4px;">{{ $message }}</p> @enderror
                         </div>
-                        <div style="margin-bottom: 12px;">
-                            <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px;">Comment <span class="muted" style="font-weight: 400;">(optional)</span></label>
-                            <textarea name="comment" rows="3" placeholder="Share your thoughts about this book..." style="resize: vertical;">{{ old('comment', $userReview?->comment) }}</textarea>
-                            @error('comment') <p style="color: #dc2626; font-size: 13px; margin-top: 4px;">{{ $message }}</p> @enderror
-                        </div>
-                        <button type="submit" style="width: auto; padding: 8px 20px;">
-                            {{ $userReview ? 'Update Review' : 'Submit Review' }}
-                        </button>
-                    </form>
-                    @if($userReview)
-                        <form method="POST" action="{{ route('books.reviews.destroy', $book->id) }}" style="margin-top: 8px;">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" style="width: auto; padding: 8px 20px; background: #dc2626;" onclick="return confirm('Remove your review?')">
-                                Remove Review
-                            </button>
-                        </form>
-                    @endif
+                    @endforeach
                 </div>
             @endif
 
-            @if($reviews->isEmpty())
-                <p class="muted">No reviews yet. Be the first to leave one!</p>
-            @else
-                @foreach($reviews as $review)
-                    <div style="padding: 14px 0; border-bottom: 1px solid #f3f4f6;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; gap: 12px; flex-wrap: wrap;">
-                            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                                <a href="{{ route('user.public_profile', $review->user_id) }}" style="font-size: 14px; font-weight: 700;">{{ $review->user?->publicDisplayName() ?? 'Unknown' }}</a>
-                                <span style="font-size: 18px; letter-spacing: -1px;">
-                                    @for($i = 1; $i <= 5; $i++)
-                                        <span style="color: {{ $review->rating >= $i ? '#f59e0b' : '#d1d5db' }};">&#9733;</span>
-                                    @endfor
-                                </span>
-                                <span class="muted" style="font-size: 12px;">{{ $review->rating }}/5</span>
-                            </div>
-                            <span class="muted" style="font-size: 12px;">{{ $review->created_at->format('M d, Y') }}</span>
+            {{-- Rate / update form --}}
+            @php $myReview = $reviews->firstWhere('user_id', auth()->id()); @endphp
+            <div style="border-top:1px solid var(--border);padding-top:20px;">
+                <h3 style="font-size:15px;font-weight:600;margin-bottom:14px;color:var(--black);">
+                    {{ $myReview ? 'Update Your Review' : 'Leave a Review' }}
+                </h3>
+                <form method="POST" action="{{ route('books.reviews.store', $book->id) }}">
+                    @csrf
+                    {{-- Star picker --}}
+                    <div style="margin-bottom:14px;">
+                        <label style="font-size:13px;margin-bottom:8px;display:block;">Rating *</label>
+                        <div class="star-picker" id="starPicker">
+                            @for($s=1;$s<=5;$s++)
+                                <span class="star-pick" data-val="{{ $s }}" onclick="pickStar({{ $s }})"
+                                    style="font-size:28px;cursor:pointer;color:{{ ($myReview && $myReview->rating >= $s) ? '#f59e0b' : 'var(--mid)' }};transition:color .12s;user-select:none;">★</span>
+                            @endfor
                         </div>
-                        @if($review->comment)
-                            <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #374151;">{{ $review->comment }}</p>
-                        @else
-                            <p class="muted" style="font-size: 13px; margin: 0;">No comment left.</p>
-                        @endif
+                        <input type="hidden" name="rating" id="ratingInput" value="{{ $myReview->rating ?? '' }}" required>
+                        @error('rating')<div style="color:#b91c1c;font-size:13px;margin-top:4px;">{{ $message }}</div>@enderror
                     </div>
-                @endforeach
-            @endif
-        </div>
-    @endauth
-
-    {{-- EDIT HISTORY SECTION --}}
-    <div class="card">
-        <h2>Edit History</h2>
-        @if($editHistory->isEmpty())
-            <p class="muted">No edit history recorded yet.</p>
-        @else
-            <table>
-                <thead>
-                    <tr><th>Date</th><th>Action</th><th>Field</th><th>Old Value</th><th>New Value</th><th>By</th></tr>
-                </thead>
-                <tbody>
-                    @foreach($editHistory as $entry)
-                        <tr>
-                            <td style="white-space: nowrap;">{{ $entry->created_at->format('M d, Y H:i') }}</td>
-                            <td><span class="badge">{{ ucfirst($entry->action) }}</span></td>
-                            <td>{{ ucfirst(str_replace('_', ' ', $entry->field_changed)) }}</td>
-                            <td class="muted">{{ $entry->old_value ?? '—' }}</td>
-                            <td>{{ $entry->new_value ?? '—' }}</td>
-                            <td class="muted">{{ $entry->user->name ?? 'System' }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        @endif
-    </div>
-
-    {{-- RELATED BOOKS SECTION --}}
-    @if($related->count() > 0)
-        <div class="card">
-            <h2>More like this</h2>
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px;">
-                @foreach($related as $rel)
-                    <a href="{{ route('books.show', ['book' => $rel->id, 'back' => $backUrl]) }}" style="text-decoration: none; color: inherit;">
-                        <div style="border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: white; cursor: pointer;"
-                             onmouseover="this.style.borderColor='#111827'" onmouseout="this.style.borderColor='#ddd'">
-                            <img src="{{ $rel->coverUrl() }}" alt="{{ $rel->title }}"
-                                 loading="lazy"
-                                 style="width: 100%; height: 160px; object-fit: cover; display: block; background: #e5e7eb;"
-                                 onerror="this.onerror=null; this.src='{{ $rel->noImageSvg() }}'">
-                            <div style="padding: 8px;">
-                                <div style="font-weight: bold; font-size: 12px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">{{ $rel->title }}</div>
-                                <div class="muted" style="font-size: 11px; margin-top: 2px;">{{ $rel->published_year }}</div>
-                                <span class="badge {{ $rel->status === 'available' ? 'badge-green' : 'badge-red' }}" style="font-size: 10px; margin-top: 4px;">{{ ucfirst($rel->status) }}</span>
-                            </div>
-                        </div>
-                    </a>
-                @endforeach
+                    <div style="margin-bottom:14px;">
+                        <label style="font-size:13px;margin-bottom:6px;display:block;">Comment <span class="muted" style="font-weight:400;">(optional)</span></label>
+                        <textarea name="comment" rows="3" placeholder="Share your thoughts about this book…" style="resize:vertical;">{{ old('comment', $myReview->comment ?? '') }}</textarea>
+                        @error('comment')<div style="color:#b91c1c;font-size:13px;margin-top:4px;">{{ $message }}</div>@enderror
+                    </div>
+                    <button type="submit" style="padding:9px 22px;">{{ $myReview ? 'Update Review' : 'Submit Review' }}</button>
+                </form>
             </div>
         </div>
-    @endif
+        @endif
+    @endauth
+
 @endsection
 
 @push('scripts')
 <script>
-    let selectedRating = {{ $userReview ? $userReview->rating : 0 }};
-    function hoverStars(n) { for (let i=1;i<=5;i++) document.getElementById('star-label-'+i).style.color = i<=n ? '#f59e0b' : '#d1d5db'; }
-    function resetStars()  { for (let i=1;i<=5;i++) document.getElementById('star-label-'+i).style.color = i<=selectedRating ? '#f59e0b' : '#d1d5db'; }
-    function selectStar(n) { selectedRating = n; }
+var _pickedRating = parseInt(document.getElementById('ratingInput')?.value) || 0;
+
+function pickStar(val) {
+    _pickedRating = val;
+    document.getElementById('ratingInput').value = val;
+    updateStars(val);
+}
+
+function updateStars(val) {
+    document.querySelectorAll('.star-pick').forEach(function(s) {
+        s.style.color = parseInt(s.dataset.val) <= val ? '#f59e0b' : 'var(--mid)';
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var stars = document.querySelectorAll('.star-pick');
+    stars.forEach(function(s) {
+        s.addEventListener('mouseenter', function() { updateStars(parseInt(s.dataset.val)); });
+        s.addEventListener('mouseleave', function() { updateStars(_pickedRating); });
+    });
+    if (_pickedRating) updateStars(_pickedRating);
+});
 </script>
 @endpush

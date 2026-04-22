@@ -11,10 +11,7 @@ class Book extends Model
         'isbn', 'isbn_13', 'isbn_10',
         'total_copies', 'available_copies',
         'description', 'read_url', 'google_books_id', 'cover_image',
-        'book_type', 'manga_id',
-
-        // NEW
-        'series_id', 'volume_number', 'chapter_number', 'is_series_container',
+        'book_type',
     ];
 
     protected $casts = [
@@ -22,22 +19,13 @@ class Book extends Model
         'total_copies'     => 'integer',
         'available_copies' => 'integer',
         'genres'           => 'array',
-
-        // OPTIONAL but recommended
-        'is_series_container' => 'boolean',
     ];
 
-    public function borrowRecords()  { return $this->hasMany(BorrowRecord::class); }
-    public function bookmarks()      { return $this->hasMany(Bookmark::class); }
-    public function editHistories()  { return $this->hasMany(BookEditHistory::class)->latest(); }
-    public function reservations()   { return $this->hasMany(Reservation::class); }
-    public function reviews()        { return $this->hasMany(BookReview::class)->latest(); }
-
-    // NEW RELATION
-    public function series()
-    {
-        return $this->belongsTo(Series::class);
-    }
+    public function borrowRecords() { return $this->hasMany(BorrowRecord::class); }
+    public function bookmarks()     { return $this->hasMany(Bookmark::class); }
+    public function editHistories() { return $this->hasMany(BookEditHistory::class)->latest(); }
+    public function reservations()  { return $this->hasMany(Reservation::class); }
+    public function reviews()       { return $this->hasMany(BookReview::class)->latest(); }
 
     public function getStatusAttribute(): string
     {
@@ -50,37 +38,11 @@ class Book extends Model
         return $avg ? round($avg, 1) : null;
     }
 
-    public function isManga(): bool { return $this->book_type === 'manga'; }
-    public function isComic(): bool { return $this->book_type === 'comic'; }
-
-    // NEW HELPERS
-    public function isComicOrManga(): bool
-    {
-        return in_array($this->book_type, ['comic', 'manga']);
-    }
-
-    public function isVolume(): bool
-    {
-        return $this->isComicOrManga() && !is_null($this->volume_number);
-    }
-
-    public function isChapter(): bool
-    {
-        return $this->isComicOrManga() && !is_null($this->chapter_number);
-    }
-
-    public function showTypeBadge(): bool
-    {
-        if ($this->book_type === 'book') return false;
-        return strtolower($this->genre ?? '') !== $this->book_type;
-    }
-
     /**
      * Returns a usable cover image URL.
      */
     public function coverUrl(): string
     {
-        // 1. Stored or external cover URL
         if ($this->cover_image) {
             if (str_starts_with($this->cover_image, 'http')) {
                 return $this->cover_image;
@@ -90,21 +52,18 @@ class Book extends Model
             }
         }
 
-        // 2. Google Books API thumbnail by volume ID
         if ($this->google_books_id) {
             return 'https://books.google.com/books/content?id='
                 . urlencode($this->google_books_id)
                 . '&printsec=frontcover&img=1&zoom=1&source=gbs_api';
         }
 
-        // 3. Open Library by ISBN
         $isbn  = $this->isbn_13 ?: $this->isbn_10 ?: $this->isbn;
         $clean = preg_replace('/[^0-9X]/', '', $isbn ?? '');
         if (strlen($clean) >= 10 && is_numeric(rtrim($clean, 'X'))) {
             return 'https://covers.openlibrary.org/b/isbn/' . $clean . '-L.jpg';
         }
 
-        // 4. SVG placeholder
         return $this->noImageSvg();
     }
 

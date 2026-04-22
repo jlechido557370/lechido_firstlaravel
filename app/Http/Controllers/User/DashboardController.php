@@ -9,7 +9,6 @@ use App\Models\BorrowRecord;
 use App\Models\Payment;
 use App\Models\Reservation;
 use App\Models\UserNotification;
-use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
@@ -84,7 +83,7 @@ class DashboardController extends Controller
                     ->where('type', 'overdue')
                     ->exists();
 
-                if (!$exists) {
+                if (! $exists) {
                     $bookTitle = $borrowing->book->title ?? 'a book';
                     UserNotification::create([
                         'user_id'          => $userId,
@@ -99,7 +98,7 @@ class DashboardController extends Controller
                     ->where('type', 'due_soon')
                     ->exists();
 
-                if (!$exists) {
+                if (! $exists) {
                     $bookTitle = $borrowing->book->title ?? 'a book';
                     UserNotification::create([
                         'user_id'          => $userId,
@@ -114,20 +113,16 @@ class DashboardController extends Controller
 
     public function borrowBook(Book $book)
     {
-        // Disallow borrowing for comics/manga
-        if ($book->isComicOrManga()) {
-            return back()->with('error', 'Comics and Manga cannot be borrowed. You can only read them online.');
-        }
-
         $user  = auth()->user();
         $limit = $user->isSubscribed() ? self::MAX_BORROWS_SUB : self::MAX_BORROWS_FREE;
 
         $activeBorrows = BorrowRecord::where('user_id', $user->id)->whereNull('returned_at')->count();
         if ($activeBorrows >= $limit) {
-            if (!$user->isSubscribed()) {
+            if (! $user->isSubscribed()) {
                 return back()->with('subscription_prompt', true)
                              ->with('error', 'You have reached the free limit of ' . self::MAX_BORROWS_FREE . ' borrowed books. Subscribe to borrow up to 25 at once.');
             }
+
             return back()->with('error', 'You have reached the maximum limit of ' . self::MAX_BORROWS_SUB . ' borrowed books.');
         }
 
@@ -171,7 +166,7 @@ class DashboardController extends Controller
 
         $fine = $borrowing->calculateFine();
 
-        if ($fine > 0 && !$borrowing->fine_paid) {
+        if ($fine > 0 && ! $borrowing->fine_paid) {
             return back()->with('error', "You have an outstanding fine of ₱{$fine}. Please pay your fine before returning the book.");
         }
 
@@ -182,36 +177,37 @@ class DashboardController extends Controller
         }
 
         $fineTxt   = $fine > 0 ? " Fine: ₱{$fine}" : '';
-        $bookTitle = $borrowing->book->title ?? 'book';
+        $fineColor = $fine > 0 ? 'warning' : 'success';
 
         ActivityLog::record(
             'book_returned',
-            auth()->user()->name . " returned '{$bookTitle}'.{$fineTxt}",
-            ['borrow_id' => $borrowing->id, 'fine' => $fine]
+            "{$borrowing->user->name} returned '{$borrowing->book->title}'.{$fineTxt}",
+            ['book_id' => $borrowing->book_id]
         );
 
-        return back()->with('success', "Book returned.{$fineTxt}");
+        return back()->with($fineColor, "You returned '{$borrowing->book->title}'.{$fineTxt}");
     }
 
     public function reserveBook(Book $book)
     {
         $user = auth()->user();
 
-        $alreadyReserved = Reservation::where('user_id', $user->id)
-            ->where('book_id', $book->id)->where('status', 'pending')->exists();
-        if ($alreadyReserved) {
-            return back()->with('error', 'You already have a pending reservation for this book.');
+        if (BorrowRecord::where('user_id', $user->id)->where('book_id', $book->id)->whereNull('returned_at')->exists()) {
+            return back()->with('error', 'You already borrowed this book.');
+        }
+        if (Reservation::where('user_id', $user->id)->where('book_id', $book->id)->where('status', 'pending')->exists()) {
+            return back()->with('error', 'You already reserved this book.');
         }
 
-        if ($book->available_copies > 0) {
-            return back()->with('error', 'This book is available — you can borrow it directly.');
-        }
+        Reservation::create([
+            'user_id' => $user->id,
+            'book_id' => $book->id,
+            'status'  => 'pending',
+        ]);
 
-        Reservation::create(['user_id' => $user->id, 'book_id' => $book->id]);
+        ActivityLog::record('book_reserved', "{$user->name} reserved '{$book->title}'", ['book_id' => $book->id]);
 
-        ActivityLog::record('book_reserved', "{$user->name} reserved '{$book->title}'.", ['book_id' => $book->id]);
-
-        return back()->with('success', "'{$book->title}' has been reserved. You'll be notified when available.");
+        return back()->with('success', "You reserved '{$book->title}'. We will notify you when it is available.");
     }
 
     public function cancelReservation(Reservation $reservation)
@@ -220,11 +216,15 @@ class DashboardController extends Controller
             return back()->with('error', 'Unauthorized.');
         }
 
-        $bookTitle = $reservation->book->title ?? 'book';
+        if ($reservation->status !== 'pending') {
+            return back()->with('error', 'This reservation is no longer pending.');
+        }
+
+        $title = $reservation->book->title ?? 'book';
         $reservation->update(['status' => 'cancelled']);
 
-        ActivityLog::record('reservation_cancelled', auth()->user()->name . " cancelled reservation for '{$bookTitle}'.");
+        ActivityLog::record('reservation_cancelled', auth()->user()->name . " cancelled reservation for '{$title}'", ['book_id' => $reservation->book_id]);
 
-        return back()->with('success', 'Reservation cancelled.');
+        return back()->with('success', "Your reservation for '{$title}' has been cancelled.");
     }
 }

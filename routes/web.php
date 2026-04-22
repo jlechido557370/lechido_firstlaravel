@@ -17,15 +17,10 @@ use App\Http\Controllers\User\DashboardController as UserDashboardController;
 use App\Http\Controllers\User\ProfileController;
 use Illuminate\Support\Facades\Route;
 
-// Public
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/catalogue', [HomeController::class, 'catalogue'])->name('books.catalogue');
 Route::get('/search', [HomeController::class, 'search'])->name('search');
 Route::get('/books/{book}', [HomeController::class, 'show'])->name('books.show');
-
-// ✅ NEW SERIES ROUTES (added here)
-Route::get('/series/{series}', [App\Http\Controllers\HomeController::class, 'showSeries'])->name('series.show');
-Route::post('/series/{series}/list', [App\Http\Controllers\HomeController::class, 'toggleList'])->name('series.toggleList');
 
 Route::get('/users/{user}', [ProfileController::class, 'publicProfile'])->name('user.public_profile');
 Route::get('/users/{user}/ratings', [ProfileController::class, 'publicRatings'])->name('user.public_ratings');
@@ -39,11 +34,9 @@ Route::middleware('guest')->group(function () {
 
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
-// Webhooks (no auth — external services call these)
 Route::post('/payments/webhook', [PaymentController::class, 'webhook'])->name('payments.webhook');
 Route::post('/subscription/webhook', [SubscriptionController::class, 'webhook'])->name('subscription.webhook');
 
-// Admin
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::post('/books', [AdminDashboardController::class, 'storeBook'])->name('books.store');
@@ -57,7 +50,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('/submissions/{userBook}/reject', [UserBookController::class, 'reject'])->name('submissions.reject');
 });
 
-// Staff
 Route::middleware(['auth', 'staff'])->prefix('staff')->name('staff.')->group(function () {
     Route::get('/dashboard', [StaffDashboardController::class, 'index'])->name('dashboard');
     Route::post('/borrowings/{borrowing}/return', [StaffDashboardController::class, 'returnBook'])->name('borrowings.return');
@@ -68,9 +60,7 @@ Route::middleware(['auth', 'staff'])->prefix('staff')->name('staff.')->group(fun
     Route::post('/submissions/{userBook}/reject', [UserBookController::class, 'reject'])->name('submissions.reject');
 });
 
-// Authenticated users
 Route::middleware('auth')->group(function () {
-    // Dashboard & borrowing
     Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('user.dashboard');
     Route::get('/payment-history', [UserDashboardController::class, 'paymentHistory'])->name('user.payment_history');
     Route::post('/books/{book}/borrow', [UserDashboardController::class, 'borrowBook'])->name('books.borrow');
@@ -78,18 +68,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/books/{book}/reserve', [UserDashboardController::class, 'reserveBook'])->name('books.reserve');
     Route::post('/reservations/{reservation}/cancel', [UserDashboardController::class, 'cancelReservation'])->name('user.reservations.cancel');
 
-    // Bookmarks
     Route::get('/bookmarks', [HomeController::class, 'bookmarks'])->name('books.bookmarks');
     Route::post('/books/{book}/bookmark', [HomeController::class, 'toggleBookmark'])->name('books.bookmark');
 
-    // Read
     Route::get('/books/{book}/read', [BookReadController::class, 'read'])->name('books.read');
 
-    // Reviews
     Route::post('/books/{book}/reviews', [BookReviewController::class, 'store'])->name('books.reviews.store');
     Route::delete('/books/{book}/reviews', [BookReviewController::class, 'destroy'])->name('books.reviews.destroy');
 
-    // Profile
     Route::get('/profile', [ProfileController::class, 'show'])->name('user.profile');
     Route::get('/ratings', [ProfileController::class, 'ratings'])->name('user.ratings');
     Route::put('/profile', [ProfileController::class, 'updateProfile'])->name('user.profile.update');
@@ -97,39 +83,32 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('user.avatar.update');
     Route::delete('/profile/avatar', [ProfileController::class, 'removeAvatar'])->name('user.avatar.remove');
 
-    // Payments
     Route::get('/payments/initiate/{borrowing}', [PaymentController::class, 'initiate'])->name('payments.initiate');
     Route::post('/payments/process/{borrowing}', [PaymentController::class, 'process'])->name('payments.process');
     Route::get('/payments/callback', [PaymentController::class, 'callback'])->name('payments.callback');
     Route::post('/payments/{payment}/manual-confirm', [PaymentController::class, 'manualConfirm'])->name('payments.manual_confirm');
     Route::get('/payments/{payment}/receipt', [PaymentController::class, 'receipt'])->name('payments.receipt');
 
-    // Notifications
     Route::get('/notifications/json', [MessageController::class, 'notificationsJson'])->name('notifications.json');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read_all');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
 
-    // Follows
     Route::post('/follow/user/{user}', [FollowController::class, 'toggleUser'])->name('follow.user');
     Route::post('/follow/author', [FollowController::class, 'toggleAuthor'])->name('follow.author');
     Route::get('/following', [FollowController::class, 'following'])->name('user.following');
 
-    // Block
     Route::post('/users/{user}/block', [BlockController::class, 'toggle'])->name('block.user');
 
-    // User book publishing
     Route::get('/publish', [UserBookController::class, 'create'])->name('user.publish');
     Route::post('/publish', [UserBookController::class, 'store'])->name('user.publish.store');
     Route::get('/my-submissions', [UserBookController::class, 'mySubmissions'])->name('user.submissions');
 
-    // Messages
     Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
     Route::get('/messages/{user}', [MessageController::class, 'conversation'])->name('messages.conversation');
     Route::post('/messages/{user}/send', [MessageController::class, 'send'])->name('messages.send');
     Route::get('/messages/recent/json', [MessageController::class, 'recentJson'])->name('messages.recent.json');
 
-    // Subscription
     Route::get('/subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
     Route::get('/subscription/confirm', [SubscriptionController::class, 'confirmPage'])->name('subscription.confirm');
     Route::post('/subscription/subscribe', [SubscriptionController::class, 'subscribe'])->name('subscription.subscribe');

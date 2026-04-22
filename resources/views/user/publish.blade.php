@@ -8,8 +8,8 @@
     $totalCount = \App\Models\UserBook::where('user_id', $user->id)->count();
     $atLimit = $isSubscribed ? ($totalCount >= 50) : ($todayCount >= 2);
 
-    $allGenres = ['Action','Adventure','Biography','Business','Children','Classic','Comic','Drama','Fantasy','Fiction',
-                  'History','Horror','Manga','Mystery','Philosophy','Programming','Romance','Science','Science Fiction',
+    $allGenres = ['Action','Adventure','Biography','Business','Children','Classic','Drama','Fantasy','Fiction',
+                  'History','Horror','Mystery','Philosophy','Programming','Romance','Science','Science Fiction',
                   'Self-Help','Sports','Thriller','Travel','Young Adult'];
 @endphp
 
@@ -36,29 +36,6 @@
     <div class="card">
         <form method="POST" action="{{ route('user.publish.store') }}" enctype="multipart/form-data" id="publishForm">
             @csrf
-
-            <div style="margin-bottom: 14px;">
-                <label>Book Type *</label>
-                <div style="display:flex; gap:20px; margin-top:6px; flex-wrap:wrap;">
-                    @foreach(['book' => 'Book', 'manga' => 'Manga', 'comic' => 'Comic'] as $val => $label)
-                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:normal;">
-                            <input type="radio" name="book_type" value="{{ $val }}" {{ old('book_type','book') === $val ? 'checked' : '' }} style="width:auto;" onchange="toggleMangaSection()">
-                            {{ $label }}
-                        </label>
-                    @endforeach
-                </div>
-            </div>
-
-            {{-- Manga Jikan search section --}}
-            <div id="mangaSearchSection" style="display:none; margin-bottom:16px; padding:14px; border:1px solid #e5e7eb; border-radius:6px; background:#f9fafb;">
-                <label>Search Manga by Title (Jikan/MyAnimeList)</label>
-                <div style="display:flex; gap:8px; margin-top:6px;">
-                    <input type="text" id="mangaSearchInput" placeholder="e.g. Naruto, One Piece..." style="flex:1;">
-                    <button type="button" onclick="searchManga()" style="width:auto; padding:10px 16px;">Search</button>
-                </div>
-                <div id="mangaResults" style="margin-top:10px;"></div>
-                <input type="hidden" name="manga_cover_url" id="mangaCoverUrl">
-            </div>
 
             <div style="display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start; margin-bottom:16px;">
                 <div style="flex-shrink:0; text-align:center;">
@@ -128,13 +105,12 @@
     <div class="card">
         <h2>My Submissions</h2>
         <table>
-            <thead><tr><th>Cover</th><th>Title</th><th>Type</th><th>Status</th><th>Submitted</th><th>Note</th></tr></thead>
+            <thead><tr><th>Cover</th><th>Title</th><th>Status</th><th>Submitted</th><th>Note</th></tr></thead>
             <tbody>
                 @foreach($user->userBooks()->latest()->take(10)->get() as $sub)
                     <tr>
                         <td><img src="{{ $sub->coverUrl() }}" style="width:40px;height:55px;object-fit:cover;border-radius:4px;"></td>
                         <td>{{ $sub->title }}<br><span class="muted">{{ $sub->author }}</span></td>
-                        <td><span class="badge">{{ ucfirst($sub->book_type ?? 'book') }}</span></td>
                         <td>
                             @if($sub->isPending())<span class="badge badge-yellow">Pending</span>
                             @elseif($sub->isApproved())<span class="badge badge-green">Approved</span>
@@ -161,58 +137,6 @@ function previewCover(input) {
         };
         reader.readAsDataURL(input.files[0]);
     }
-}
-
-function toggleMangaSection() {
-    var type = document.querySelector('input[name="book_type"]:checked');
-    var section = document.getElementById('mangaSearchSection');
-    section.style.display = (type && (type.value === 'manga' || type.value === 'comic')) ? 'block' : 'none';
-}
-
-function searchManga() {
-    var q = document.getElementById('mangaSearchInput').value.trim();
-    if (!q) return;
-    var resultsDiv = document.getElementById('mangaResults');
-    resultsDiv.innerHTML = 'Searching...';
-
-    fetch('https://api.jikan.moe/v4/manga?q=' + encodeURIComponent(q) + '&limit=6')
-        .then(r => r.json())
-        .then(data => {
-            if (!data.data || !data.data.length) {
-                resultsDiv.innerHTML = 'No results found.';
-                return;
-            }
-            resultsDiv.innerHTML = '<div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; margin-top:8px;">'
-                + data.data.map(function(m) {
-                    var cover = m.images && m.images.jpg ? m.images.jpg.image_url : '';
-                    var title = m.title || '';
-                    var author = m.authors && m.authors[0] ? m.authors[0].name : '';
-                    var year = m.published && m.published.prop && m.published.prop.from ? m.published.prop.from.year : '';
-                    var synopsis = (m.synopsis || '').substring(0, 100);
-                    return '<div style="border:1px solid #e5e7eb; border-radius:6px; overflow:hidden; cursor:pointer; background:white;"'
-                        + ' onclick="selectManga(' + JSON.stringify({title,author,year,cover,synopsis}).replace(/'/g, "\\'") + ')">'
-                        + '<img src="' + cover + '" style="width:100%; height:160px; object-fit:cover; display:block;" onerror="this.src=\'\';">'
-                        + '<div style="padding:6px; font-size:12px;"><strong>' + title + '</strong><br><span style="color:#6b7280;">' + author + '</span></div>'
-                        + '</div>';
-                }).join('') + '</div>';
-        })
-        .catch(function() { resultsDiv.innerHTML = 'Search failed. Please try again.'; });
-}
-
-function selectManga(info) {
-    document.getElementById('autoTitle').value = info.title || '';
-    document.getElementById('autoAuthor').value = info.author || '';
-    if (info.year) document.querySelector('[name="published_year"]').value = info.year;
-    if (info.synopsis) document.getElementById('autoDescription').value = info.synopsis;
-    if (info.cover) {
-        document.getElementById('mangaCoverUrl').value = info.cover;
-        document.getElementById('cover-preview').innerHTML = '<img src="' + info.cover + '" style="width:128px;height:190px;object-fit:cover;">';
-        // Auto-check Manga genre
-        document.querySelectorAll('input[name="genres[]"]').forEach(function(cb) {
-            if (cb.value === 'Manga') cb.checked = true;
-        });
-    }
-    document.getElementById('mangaResults').innerHTML = '<div style="color:#15803d; font-size:13px; margin-top:4px;">Selected: ' + info.title + '. Review and edit fields above before submitting.</div>';
 }
 </script>
 @endpush
