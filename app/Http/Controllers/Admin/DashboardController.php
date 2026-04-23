@@ -8,9 +8,8 @@ use App\Models\Book;
 use App\Models\BookEditHistory;
 use App\Models\BorrowRecord;
 use App\Models\Payment;
-use App\Models\Reservation;
 use App\Models\User;
-use App\Models\UserBook;          // Added for submissions
+use App\Models\UserBook;
 use App\Models\UserNotification;
 use Illuminate\Http\Request;
 
@@ -30,20 +29,19 @@ class DashboardController extends Controller
                                     ->where('due_date', '<', now())->count(),
             'pending_fines'    => BorrowRecord::where('fine_amount', '>', 0)
                                     ->where('fine_paid', false)->sum('fine_amount'),
-            'pending_books'    => UserBook::where('status', 'pending')->count(), // Added
+            'pending_books'    => UserBook::where('status', 'pending')->count(),
         ];
 
-        $books        = Book::latest()->get();
-        $borrowings   = BorrowRecord::with(['book', 'user'])->latest()->get();
-        $users        = User::latest()->get();
-        $logs         = ActivityLog::with('user')->latest()->take(200)->get();
-        $reservations = Reservation::with(['book', 'user'])->latest()->get();
-        $payments     = Payment::with(['user', 'borrowRecord.book'])->latest()->get();
-        $submissions  = UserBook::with('user')->latest()->get(); // Added
+        $books       = Book::latest()->get();
+        $borrowings  = BorrowRecord::with(['book', 'user'])->latest()->get();
+        $users       = User::latest()->get();
+        $logs        = ActivityLog::with('user')->latest()->take(200)->get();
+        $payments    = Payment::with(['user', 'borrowRecord.book'])->latest()->get();
+        $submissions = UserBook::with('user')->latest()->get();
 
         return view('admin.dashboard', compact(
             'section', 'stats', 'books', 'borrowings',
-            'users', 'editingBook', 'logs', 'reservations', 'payments', 'submissions'
+            'users', 'editingBook', 'logs', 'payments', 'submissions'
         ));
     }
 
@@ -137,16 +135,6 @@ class DashboardController extends Controller
 
         if ($borrowing->book) {
             $borrowing->book->increment('available_copies');
-
-            $nextReservation = Reservation::where('book_id', $borrowing->book_id)
-                ->where('status', 'pending')->oldest()->first();
-
-            if ($nextReservation) {
-                ActivityLog::record('reservation_notified',
-                    "Book '{$borrowing->book->title}' is now available for reserved user.",
-                    ['reservation_id' => $nextReservation->id]
-                );
-            }
         }
 
         $fineTxt   = $fine > 0 ? " Fine: ₱{$fine}" : '';
@@ -161,26 +149,14 @@ class DashboardController extends Controller
         return back()->with('success', "Book returned successfully.{$fineTxt}");
     }
 
-    public function fulfillReservation(Reservation $reservation)
-    {
-        $reservation->update(['status' => 'fulfilled']);
-        $bookTitle = $reservation->book->title ?? 'book';
-        ActivityLog::record('reservation_fulfilled', "Reservation fulfilled for '{$bookTitle}'.");
-        return back()->with('success', 'Reservation marked as fulfilled.');
-    }
-
-    public function cancelReservation(Reservation $reservation)
-    {
-        $reservation->update(['status' => 'cancelled']);
-        $bookTitle = $reservation->book->title ?? 'book';
-        ActivityLog::record('reservation_cancelled', "Reservation cancelled for '{$bookTitle}'.");
-        return back()->with('success', 'Reservation cancelled.');
-    }
-
+    /**
+     * RBAC — now supports all four roles:
+     * user | subscribed_user | staff | admin
+     */
     public function updateUserRole(Request $request, User $user)
     {
         $request->validate([
-            'role' => ['required', 'in:user,staff,admin'],
+            'role' => ['required', 'in:' . implode(',', User::ROLES)],
         ]);
 
         if ($user->id === auth()->id()) {
@@ -188,12 +164,23 @@ class DashboardController extends Controller
         }
 
         $oldRole = $user->role;
-        $user->update(['role' => $request->role]);
+        $newRole = $request->role;
+
+        $user->update(['role' => $newRole]);
+
+        // Sync is_subscribed flag when assigning subscribed_user role
+        if ($newRole === 'subscribed_user' && !$user->is_subscribed) {
+            $user->update(['is_subscribed' => true]);
+        }
+        if (in_array($newRole, ['user', 'staff', 'admin']) && $oldRole === 'subscribed_user') {
+            // Optionally clear subscription flag when demoting from subscribed_user
+            // $user->update(['is_subscribed' => false]);
+        }
 
         ActivityLog::record('role_changed',
-            "Admin changed {$user->name}'s role from {$oldRole} to {$request->role}."
+            "Admin changed {$user->name}'s role from {$oldRole} to {$newRole}."
         );
 
-        return back()->with('success', "Role updated to {$request->role}.");
+        return back()->with('success', "Role updated to {$newRole}.");
     }
 }

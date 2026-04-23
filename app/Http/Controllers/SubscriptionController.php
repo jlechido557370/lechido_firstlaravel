@@ -181,11 +181,16 @@ class SubscriptionController extends Controller
             return back()->with('error', 'You do not have an active subscription.');
         }
 
-        $user->update([
+  $user->update([
             'is_subscribed'           => false,
             'subscription_expires_at' => null,
             'subscription_plan'       => null,
         ]);
+
+        // Downgrade role back to user on cancellation
+        if ($user->role === 'subscribed_user') {
+            $user->update(['role' => 'user']);
+        }
 
         UserNotification::create([
             'user_id' => $user->id,
@@ -209,13 +214,18 @@ class SubscriptionController extends Controller
             ? $user->subscription_expires_at->addMonths($months)
             : now()->addMonths($months);
 
-        $user->update([
+ $user->update([
             'is_subscribed'           => true,
             'subscription_expires_at' => $expiresAt,
             'subscription_plan'       => $plan,
             'subscription_amount'     => $amount,
             'subscription_paid_at'    => now(),
         ]);
+
+        // Auto-upgrade role to subscribed_user on payment
+        if ($user->role === 'user') {
+            $user->update(['role' => 'subscribed_user']);
+        }
 
         // Store payment record for payment history & receipt access
         $payment = Payment::create([

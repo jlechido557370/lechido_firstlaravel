@@ -30,22 +30,14 @@ class User extends Authenticatable
         ];
     }
 
-    public function borrowRecords()   { return $this->hasMany(BorrowRecord::class); }
-    public function bookmarks()       { return $this->hasMany(Bookmark::class); }
-    public function bookReviews()     { return $this->hasMany(BookReview::class); }
-    public function payments()        { return $this->hasMany(Payment::class); }
-    public function userBooks()       { return $this->hasMany(UserBook::class); }
-
-    // NEW RELATION
-    public function userLists()
-    {
-        return $this->hasMany(UserList::class);
-    }
-
-    public function userNotifications()
-    {
-        return $this->hasMany(UserNotification::class);
-    }
+    // ── Relations ─────────────────────────────────────────────────────────────
+    public function borrowRecords()    { return $this->hasMany(BorrowRecord::class); }
+    public function bookmarks()        { return $this->hasMany(Bookmark::class); }
+    public function bookReviews()      { return $this->hasMany(BookReview::class); }
+    public function payments()         { return $this->hasMany(Payment::class); }
+    public function userBooks()        { return $this->hasMany(UserBook::class); }
+    public function userLists()        { return $this->hasMany(UserList::class); }
+    public function userNotifications(){ return $this->hasMany(UserNotification::class); }
 
     public function unreadNotifications()
     {
@@ -62,20 +54,49 @@ class User extends Authenticatable
         return $this->belongsToMany(User::class, 'follows', 'following_id', 'follower_id')->withTimestamps();
     }
 
-    public function authorFollows()   { return $this->hasMany(AuthorFollow::class); }
-    public function sentMessages()    { return $this->hasMany(Message::class, 'sender_id'); }
-    public function receivedMessages(){ return $this->hasMany(Message::class, 'receiver_id'); }
+    public function authorFollows()    { return $this->hasMany(AuthorFollow::class); }
+    public function sentMessages()     { return $this->hasMany(Message::class, 'sender_id'); }
+    public function receivedMessages() { return $this->hasMany(Message::class, 'receiver_id'); }
+    public function blocks()           { return $this->hasMany(Block::class, 'blocker_id'); }
+    public function blockedBy()        { return $this->hasMany(Block::class, 'blocked_id'); }
 
-    public function blocks()
+    // ── Role helpers ──────────────────────────────────────────────────────────
+
+    /** The four RBAC roles in order of privilege. */
+    public const ROLES = ['user', 'subscribed_user', 'staff', 'admin'];
+
+    public function isAdmin(): bool          { return $this->role === 'admin'; }
+    public function isStaff(): bool          { return $this->role === 'staff'; }
+    public function isSubscribedUser(): bool { return $this->role === 'subscribed_user'; }
+    public function isRegularUser(): bool    { return $this->role === 'user'; }
+
+    /** True for admin OR staff — can access management dashboards. */
+    public function isAdminOrStaff(): bool   { return in_array($this->role, ['admin', 'staff']); }
+
+    /** True for any elevated role (not plain 'user'). */
+    public function hasElevatedRole(): bool  { return in_array($this->role, ['admin', 'staff', 'subscribed_user']); }
+
+    // ── Subscription ──────────────────────────────────────────────────────────
+
+    /**
+     * Returns true if the user has an active subscription.
+     * Works for both is_subscribed flag AND the subscribed_user role.
+     */
+    public function isSubscribed(): bool
     {
-        return $this->hasMany(Block::class, 'blocker_id');
+        // Role-based subscription (manually assigned by admin)
+        if ($this->role === 'subscribed_user') return true;
+
+        // Flag-based subscription (payment gateway)
+        if (!$this->is_subscribed) return false;
+        if ($this->subscription_expires_at && $this->subscription_expires_at->isPast()) {
+            $this->update(['is_subscribed' => false]);
+            return false;
+        }
+        return true;
     }
 
-    public function blockedBy()
-    {
-        return $this->hasMany(Block::class, 'blocked_id');
-    }
-
+    // ── Social helpers ────────────────────────────────────────────────────────
     public function isFollowing(User $user): bool
     {
         return $this->following()->where('following_id', $user->id)->exists();
@@ -101,20 +122,7 @@ class User extends Authenticatable
         return Message::where('receiver_id', $this->id)->whereNull('read_at')->count();
     }
 
-    public function isAdmin(): bool        { return $this->role === 'admin'; }
-    public function isStaff(): bool        { return $this->role === 'staff'; }
-    public function isAdminOrStaff(): bool { return in_array($this->role, ['admin', 'staff']); }
-
-    public function isSubscribed(): bool
-    {
-        if (!$this->is_subscribed) return false;
-        if ($this->subscription_expires_at && $this->subscription_expires_at->isPast()) {
-            $this->update(['is_subscribed' => false]);
-            return false;
-        }
-        return true;
-    }
-
+    // ── Display helpers ───────────────────────────────────────────────────────
     public function displayName(): string
     {
         return $this->username ?? $this->name;
@@ -132,6 +140,16 @@ class User extends Authenticatable
     {
         $name = $this->displayName();
         return $this->isSubscribed() ? $name . '+' : $name;
+    }
+
+    public function roleName(): string
+    {
+        return match($this->role) {
+            'admin'           => 'Admin',
+            'staff'           => 'Staff',
+            'subscribed_user' => 'Subscribed',
+            default           => 'User',
+        };
     }
 
     public function avatarUrl(): string

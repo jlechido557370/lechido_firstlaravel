@@ -279,7 +279,14 @@
             z-index: 999; overflow-y: auto;
             transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: var(--shadow-lg);
+            /* Modern custom scrollbar */
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
         }
+        .side-drawer::-webkit-scrollbar { width: 4px; }
+        .side-drawer::-webkit-scrollbar-track { background: transparent; }
+        .side-drawer::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+        .side-drawer::-webkit-scrollbar-thumb:hover { background: var(--muted); }
         .side-drawer.open { left: 0; }
         .drawer-overlay {
             display: none; position: fixed; inset: 0;
@@ -321,17 +328,22 @@
             display: block;
         }
         .drawer-link {
-            display: block; padding: 11px 20px;
+            display: flex; align-items: center; gap: 11px; padding: 11px 20px;
             color: var(--black); border-bottom: 1px solid var(--mid);
             font-size: 13.5px; background: var(--white);
             transition: background .12s, color .12s, padding-left .18s;
         }
+        .drawer-link svg { width: 15px; height: 15px; stroke: var(--muted); fill: none; stroke-width: 1.8; flex-shrink: 0; transition: stroke .12s; }
         .drawer-link:hover { background: var(--off); padding-left: 26px; opacity: 1; }
+        .drawer-link:hover svg { stroke: var(--black); }
         .drawer-link.active { background: var(--off); }
         .drawer-link-sub { background: var(--black) !important; color: var(--white) !important; font-weight: 500; }
+        .drawer-link-sub svg { stroke: rgba(255,255,255,.5) !important; }
         .drawer-link-sub:hover { opacity: .85 !important; padding-left: 20px !important; }
         .drawer-link-danger { color: #dc2626 !important; }
+        .drawer-link-danger svg { stroke: #dc2626 !important; }
         [data-theme="dark"] .drawer-link-danger { color: #f87171 !important; }
+        [data-theme="dark"] .drawer-link-danger svg { stroke: #f87171 !important; }
         .drawer-link-danger:hover { background: rgba(220,38,38,.06) !important; }
 
         .drawer-auth { display: flex; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--border); background: var(--white); }
@@ -342,14 +354,15 @@
 
         /* Browse dropdown in drawer */
         .drawer-browse-toggle {
-            display: flex; align-items: center; justify-content: space-between;
+            display: flex; align-items: center; gap: 11px;
             padding: 11px 20px; color: var(--black); border-bottom: 1px solid var(--mid);
             font-size: 13.5px; background: var(--white); cursor: pointer;
             transition: background .12s, color .12s; user-select: none;
         }
+        .drawer-browse-toggle > svg:first-child { width: 15px; height: 15px; stroke: var(--muted); fill: none; stroke-width: 1.8; flex-shrink: 0; }
         .drawer-browse-toggle:hover { background: var(--off); opacity: 1; }
-        .drawer-browse-toggle svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; transition: transform .22s ease; flex-shrink: 0; color: var(--muted); }
-        .drawer-browse-toggle.open svg { transform: rotate(180deg); }
+        .drawer-browse-toggle .chevron { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; transition: transform .22s ease; flex-shrink: 0; color: var(--muted); margin-left: auto; }
+        .drawer-browse-toggle.open .chevron { transform: rotate(180deg); }
         .drawer-browse-sub {
             display: none; background: var(--off); border-bottom: 1px solid var(--mid);
         }
@@ -517,6 +530,29 @@
         .icon-dropdown-panel, .profile-menu-panel { transition: opacity .22s ease, transform .22s ease, visibility 0s linear .22s !important; }
         .icon-dropdown-panel.open, .profile-menu-panel.open { transition: opacity .22s ease, transform .22s ease, visibility 0s !important; }
         .drawer-link { transition: background .12s, padding-left .18s !important; }
+
+        /* ── PAGE ANIMATIONS ── */
+        @keyframes pageIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes cardIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes navSlide { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+        .page-body { animation: pageIn .45s ease both; }
+        .nav { animation: navSlide .35s ease both; }
+        .card { animation: cardIn .5s ease both; }
+        .card:nth-child(2) { animation-delay: .06s; }
+        .card:nth-child(3) { animation-delay: .12s; }
+        .card:nth-child(4) { animation-delay: .18s; }
+        .card:nth-child(5) { animation-delay: .22s; }
+
+        /* Flash messages animate in */
+        .flash { animation: cardIn .4s ease both; }
+
+        /* Sidebar drawer link stagger on open */
+        .side-drawer.open .drawer-link:nth-child(1) { animation: cardIn .25s ease both; }
+        .side-drawer.open .drawer-link:nth-child(2) { animation: cardIn .25s .04s ease both; }
+        .side-drawer.open .drawer-link:nth-child(3) { animation: cardIn .25s .08s ease both; }
+        .side-drawer.open .drawer-link:nth-child(4) { animation: cardIn .25s .12s ease both; }
+        .side-drawer.open .drawer-link:nth-child(5) { animation: cardIn .25s .16s ease both; }
     </style>
 </head>
 <body>
@@ -562,37 +598,42 @@
 
     <span class="drawer-section-title">My Library</span>
     @if(auth()->user()->isAdmin())
-        <a href="{{ route('admin.dashboard') }}" class="drawer-link">Admin Dashboard</a>
+        <a href="{{ route('admin.dashboard') }}" class="drawer-link"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Admin Dashboard</a>
     @elseif(auth()->user()->isStaff())
-        <a href="{{ route('staff.dashboard') }}" class="drawer-link">Staff Dashboard</a>
+        <a href="{{ route('staff.dashboard') }}" class="drawer-link"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Staff Dashboard</a>
     @else
         <a href="{{ route('subscription.index') }}" class="drawer-link drawer-link-sub">
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
             {{ auth()->user()->isSubscribed() ? 'Manage Subscription' : 'Subscribe' }}
         </a>
-        <a href="{{ route('user.dashboard') }}" class="drawer-link">Dashboard</a>
-        <a href="{{ route('books.bookmarks') }}" class="drawer-link">Bookmarks / Lists</a>
-        <a href="{{ route('user.ratings') }}" class="drawer-link">Ratings</a>
-        <a href="{{ route('user.following') }}" class="drawer-link">Following</a>
-        <a href="{{ route('user.publish') }}" class="drawer-link">Publish a Book</a>
-        <a href="{{ route('user.submissions') }}" class="drawer-link">My Submissions</a>
+        <a href="{{ route('user.dashboard') }}" class="drawer-link"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+        <a href="{{ route('books.bookmarks') }}" class="drawer-link"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Bookmarks / Lists</a>
+        <a href="{{ route('user.ratings') }}" class="drawer-link"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Ratings</a>
+        <a href="{{ route('user.following') }}" class="drawer-link"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Following</a>
+        <a href="{{ route('user.publish') }}" class="drawer-link"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Publish a Book</a>
+        <a href="{{ route('user.submissions') }}" class="drawer-link"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>My Submissions</a>
     @endif
-    <a href="{{ route('messages.index') }}" class="drawer-link">Messages @if($unreadMessageCount > 0)<span style="font-family:var(--font-mono);font-size:11px;color:#888;">({{ $unreadMessageCount }})</span>@endif</a>
-    <a href="{{ route('notifications.index') }}" class="drawer-link">Notifications @if($unreadNotificationCount > 0)<span style="font-family:var(--font-mono);font-size:11px;color:#888;">({{ $unreadNotificationCount }})</span>@endif</a>
-    <a href="{{ route('user.profile') }}" class="drawer-link">My Profile</a>
+    <a href="{{ route('messages.index') }}" class="drawer-link"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Messages @if($unreadMessageCount > 0)<span style="font-family:var(--font-mono);font-size:11px;color:#888;margin-left:auto;">({{ $unreadMessageCount }})</span>@endif</a>
+    <a href="{{ route('notifications.index') }}" class="drawer-link"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Notifications @if($unreadNotificationCount > 0)<span style="font-family:var(--font-mono);font-size:11px;color:#888;margin-left:auto;">({{ $unreadNotificationCount }})</span>@endif</a>
+    <a href="{{ route('user.profile') }}" class="drawer-link"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>My Profile</a>
     <form action="{{ route('logout') }}" method="POST" style="margin:0;">
         @csrf
-        <button type="submit" class="drawer-link drawer-link-danger" style="width:100%;text-align:left;background:none;border:none;border-bottom:1px solid #1a1a18;padding:11px 20px;font-size:13.5px;cursor:pointer;font-family:var(--font-sans);border-radius:0;display:block;">Logout</button>
+        <button type="submit" class="drawer-link drawer-link-danger" style="width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--mid);cursor:pointer;font-family:var(--font-sans);border-radius:0;">
+            <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Logout
+        </button>
     </form>
     @endauth
 
     <span class="drawer-section-title">Browse</span>
-    <a href="{{ route('home') }}" class="drawer-link">Home</a>
-    <a href="{{ route('books.catalogue') }}" class="drawer-link">Catalogue</a>
+    <a href="{{ route('home') }}" class="drawer-link"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</a>
+    <a href="{{ route('books.catalogue') }}" class="drawer-link"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Catalogue</a>
 
     {{-- Sort filters dropdown --}}
     <div class="drawer-browse-toggle" id="sortToggle" onclick="toggleBrowseSection('sortSub','sortToggle')">
+        <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
         <span>Sort by</span>
-        <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        <svg class="chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
     <div class="drawer-browse-sub" id="sortSub">
         <a href="{{ route('home', ['sort' => 'latest']) }}">Newest Added</a>
@@ -605,8 +646,9 @@
     {{-- Genre filters dropdown --}}
     @php $genres = \App\Models\Book::select('genre')->distinct()->whereNotNull('genre')->whereNotIn('genre', ['Manga', 'Comic'])->where('book_type', 'book')->orderBy('genre')->pluck('genre'); @endphp
     <div class="drawer-browse-toggle" id="genreToggle" onclick="toggleBrowseSection('genreSub','genreToggle')">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <span>Subjects</span>
-        <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        <svg class="chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
     <div class="drawer-browse-sub" id="genreSub">
         @foreach($genres as $g)

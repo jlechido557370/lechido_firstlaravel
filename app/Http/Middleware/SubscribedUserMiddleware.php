@@ -6,7 +6,11 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class AdminMiddleware
+/**
+ * Allows access to: admin, staff, subscribed_user
+ * Blocks: regular user (role = 'user')
+ */
+class SubscribedUserMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
@@ -14,8 +18,10 @@ class AdminMiddleware
             return redirect()->route('login');
         }
 
-        if (auth()->user()->role !== 'admin') {
-            abort(403, 'Admin access only.');
+        $user = auth()->user();
+
+        if (!$user->isSubscribed() && !$user->isAdminOrStaff()) {
+            abort(403, 'This area requires a subscription.');
         }
 
         return $next($request);
