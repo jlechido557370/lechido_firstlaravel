@@ -139,7 +139,7 @@ class User extends Authenticatable
     public function badgedName(): string
     {
         $name = $this->displayName();
-        return $this->isSubscribed() ? $name . '+' : $name;
+        return $this->isSubscribed() ? $name . ' ✦' : $name;
     }
 
     public function roleName(): string

@@ -5,14 +5,15 @@
 @section('content')
     @php $currentUrl = request()->fullUrl(); @endphp
 
-    <div class="card">
-        <h1>Search</h1>
+    <div class="card reveal">
+        <h1 style="margin-bottom:6px;">Search</h1>
+        <p style="color:var(--muted);margin-bottom:18px;font-size:15px;">Find books by title, author, or genre — and discover other readers.</p>
         <form method="GET" action="{{ route('search') }}" style="margin-top: 12px;">
-            <input type="search" name="q" value="{{ $q }}" placeholder="Search books or users">
+            <input type="search" name="q" value="{{ $q }}" placeholder="Search books or users…" style="font-size:16px;padding:13px 16px;">
         </form>
     </div>
 
-    <div class="card">
+    <div class="card reveal">
         <h2>Books</h2>
         @if($q === '')
             <p class="muted">Type something to search books and users.</p>
@@ -42,7 +43,7 @@
         @endif
     </div>
 
-    <div class="card">
+    <div class="card reveal">
         <h2>Users</h2>
         @if($q === '')
             <p class="muted">User results will appear here too.</p>
@@ -52,20 +53,29 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Name</th>
+                        <th>Username</th>
                         <th>Role</th>
-                        <th>Bio</th>
+                        <th>Joined</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($users as $user)
                         <tr>
                             <td>
-                                <a href="{{ route('user.public_profile', $user->id) }}">{{ $user->displayName() }}</a>
-                                @if($user->username)<span class="muted" style="font-size:12px;font-family:var(--font-mono);"> {{ $user->username }}</span>@endif
+                                <a href="{{ route('user.public_profile', $user->id) }}">{{ $user->username ?? $user->displayName() }}</a>
                             </td>
-                            <td>{{ ucfirst($user->role) }}</td>
-                            <td>{{ $user->bio ?: '—' }}</td>
+                            <td>
+                                @php
+                                    $roleLabel = match($user->role) {
+                                        'subscribed_user' => 'Subscriber',
+                                        'admin' => 'Admin',
+                                        'staff' => 'Staff',
+                                        default => ucfirst($user->role),
+                                    };
+                                @endphp
+                                <span class="badge">{{ $roleLabel }}</span>
+                            </td>
+                            <td>{{ $user->created_at?->format('M d, Y') ?? '—' }}</td>
                         </tr>
                     @endforeach
                 </tbody>

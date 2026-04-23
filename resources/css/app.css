@@ -70,13 +70,12 @@
     * {
         border-color: rgba(0, 0, 0, 0.08);
     }
-
     .dark * {
         border-color: rgba(255, 255, 255, 0.08);
     }
 }
 
-/* Underline-style inputs matching the design */
+/* Underline inputs */
 .input-underline {
     width: 100%;
     padding: 0.5rem 0;
@@ -87,31 +86,21 @@
     font-size: 0.875rem;
     transition: border-color 0.15s;
 }
-
 .dark .input-underline {
     border-bottom-color: #374151;
     color: #f9fafb;
 }
-
 .input-underline:focus {
     border-bottom-color: #111827;
 }
-
 .dark .input-underline:focus {
     border-bottom-color: #f9fafb;
 }
-
 .input-underline::placeholder {
     color: #d1d5db;
 }
-
 .dark .input-underline::placeholder {
     color: #4b5563;
-}
-
-/* Sidebar transition */
-.sidebar-enter {
-    transform: translateX(-100%);
 }
 
 /* Smooth theme transitions */
@@ -122,8 +111,6 @@
     transition-duration: 0.2s;
     transition-timing-function: ease;
 }
-
-/* Exclude transitions on interactive transforms */
 button,
 a,
 input,

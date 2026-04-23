@@ -123,7 +123,12 @@
         background: var(--white); max-width: 680px; margin: 40px auto;
         border-radius: 14px; padding: 32px; position: relative;
         border: 1.5px solid var(--border); box-shadow: var(--shadow-lg);
+        max-height: calc(100vh - 80px); overflow-y: auto;
+        scrollbar-width: thin; scrollbar-color: var(--border) transparent;
     }
+    .terms-modal::-webkit-scrollbar { width: 6px; }
+    .terms-modal::-webkit-scrollbar-track { background: transparent; }
+    .terms-modal::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
     .terms-modal h2 { margin-top: 0; font-size: 22px; font-weight: 600; letter-spacing: -.02em; margin-bottom: 4px; }
     .terms-modal h3 { font-size: 15px; font-weight: 600; margin: 20px 0 6px; color: var(--black); }
     .terms-modal p { color: var(--muted); font-size: 13.5px; line-height: 1.75; }

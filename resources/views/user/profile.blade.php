@@ -106,10 +106,10 @@
 
 {{-- ── HERO HEADER ── --}}
 <div class="profile-panel" style="
-    background: linear-gradient(135deg, var(--black) 0%, color-mix(in srgb, var(--black) 82%, transparent) 100%);
-    color: var(--white);
+    background: linear-gradient(135deg, #0f172a 0%, #111827 100%);
+    color: #ffffff;
     padding: 36px 40px;
-    border: none;
+    border: 1px solid rgba(148,163,184,.18);
     margin-bottom: 16px;
     position: relative;
     overflow: hidden;
@@ -123,26 +123,26 @@
             <img src="{{ $user->avatarUrl() }}" alt="avatar"
                  style="width:88px;height:88px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.25);box-shadow:0 4px 20px rgba(0,0,0,.4);">
             @if($user->isSubscribed())
-                <div style="position:absolute;bottom:0;right:0;width:22px;height:22px;background:var(--white);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;border:2px solid var(--black);">✦</div>
+                <div style="position:absolute;bottom:0;right:0;width:22px;height:22px;background:#ffffff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;border:2px solid #0f172a;">✦</div>
             @endif
         </div>
         <div style="flex:1;min-width:0;">
-            <h1 style="font-size:26px;font-weight:500;color:var(--white);margin-bottom:4px;">{{ $user->badgedName() }}</h1>
-            <div style="font-size:12px;color:rgba(255,255,255,.5);font-family:var(--font-mono);letter-spacing:.04em;text-transform:uppercase;">
+            <h1 style="font-size:26px;font-weight:500;color:#ffffff;margin-bottom:4px;">{{ $user->badgedName() }}</h1>
+            <div style="font-size:12px;color:rgba(255,255,255,.68);font-family:var(--font-mono);letter-spacing:.04em;text-transform:uppercase;">
                 {{ ucfirst($user->role) }} &nbsp;·&nbsp; Member since {{ $user->created_at->format('F Y') }}
             </div>
             @if($user->isSubscribed())
-                <div style="display:inline-block;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);padding:3px 10px;font-size:11px;font-family:var(--font-mono);letter-spacing:.05em;color:rgba(255,255,255,.8);margin-top:8px;border-radius:4px;">
+                <div style="display:inline-block;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);padding:3px 10px;font-size:11px;font-family:var(--font-mono);letter-spacing:.05em;color:rgba(255,255,255,.88);margin-top:8px;border-radius:4px;">
                     SUBSCRIBER — expires {{ $user->subscription_expires_at?->format('M d, Y') }}
                 </div>
             @endif
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0;">
-            <a href="{{ route('user.public_profile', $user->id) }}" style="color:rgba(255,255,255,.7);font-size:13px;border:1px solid rgba(255,255,255,.2);padding:8px 16px;border-radius:8px;display:inline-flex;align-items:center;gap:6px;transition:background .15s;">
+            <a href="{{ route('user.public_profile', $user->id) }}" style="color:rgba(255,255,255,.9);font-size:13px;border:1px solid rgba(255,255,255,.2);padding:8px 16px;border-radius:8px;display:inline-flex;align-items:center;gap:6px;transition:background .15s;">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 Public Profile
             </a>
-            <a href="{{ route('user.ratings') }}" style="color:rgba(255,255,255,.7);font-size:13px;border:1px solid rgba(255,255,255,.2);padding:8px 16px;border-radius:8px;display:inline-flex;align-items:center;gap:6px;transition:background .15s;">
+            <a href="{{ route('user.ratings') }}" style="color:rgba(255,255,255,.9);font-size:13px;border:1px solid rgba(255,255,255,.2);padding:8px 16px;border-radius:8px;display:inline-flex;align-items:center;gap:6px;transition:background .15s;">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                 My Ratings
             </a>
