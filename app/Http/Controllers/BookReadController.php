@@ -12,12 +12,15 @@ class BookReadController extends Controller
     {
         $backUrl = request('back');
 
-        $hasBorrowed = BorrowRecord::where('user_id', auth()->id())
+        $user = auth()->user();
+        $isAdminOrStaff = $user->isAdmin() || $user->isStaff();
+
+        $hasBorrowed = $isAdminOrStaff ? true : BorrowRecord::where('user_id', $user->id)
             ->where('book_id', $book->id)
             ->whereNull('returned_at')
             ->exists();
 
-        if (! $hasBorrowed) {
+        if (! $hasBorrowed && ! $isAdminOrStaff) {
             return redirect()->route('books.show', ['book' => $book->id, 'back' => request('back')])
                 ->with('error', 'You must borrow this book before you can read it.');
         }
@@ -26,6 +29,8 @@ class BookReadController extends Controller
         $webReaderLink  = null;
         $previewLink    = null;
         $googleFound    = false;
+        $readUrl = null;
+        $isPdf = false;
 
         if (! $googleBooksId) {
             $googleBooksId = $this->lookupGoogleBooksId($book);
@@ -38,6 +43,9 @@ class BookReadController extends Controller
             $googleFound   = true;
             $webReaderLink = "https://books.google.com/books?id={$googleBooksId}&lpg=PP1&pg=PP1&output=embed";
             $previewLink   = "https://books.google.com/books?id={$googleBooksId}";
+        } elseif ($book->read_url) {
+            $readUrl = $book->read_url;
+            $isPdf = str_ends_with(strtolower($readUrl), '.pdf');
         }
 
         return view('books.read', compact(
@@ -46,7 +54,9 @@ class BookReadController extends Controller
             'googleFound',
             'webReaderLink',
             'previewLink',
-            'backUrl'
+            'backUrl',
+            'readUrl',
+            'isPdf'
         ));
     }
 

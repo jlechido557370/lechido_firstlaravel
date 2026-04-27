@@ -57,10 +57,17 @@ class HomeController extends Controller
     public function index()
     {
         $stats = [
-            'total_books'     => Book::where('book_type', 'book')->count(),
-            'available_books' => Book::where('book_type', 'book')->sum('available_copies'),
-            'active_borrows'  => BorrowRecord::whereNull('returned_at')->count(),
-            'members'         => User::where('role', 'user')->count(),
+            'total_books'          => Book::where('book_type', 'book')->count(),
+            'available_books'      => Book::where('book_type', 'book')->sum('available_copies'),
+            'active_borrows'       => BorrowRecord::whereNull('returned_at')->count(),
+            'members'              => User::whereIn('role', ['user', 'subscribed_user'])->count(),
+            'total_users'          => User::count(),
+            'total_borrows_all'    => BorrowRecord::count(),
+            'total_reviews'        => BookReview::count(),
+            'total_bookmarks'      => Bookmark::count(),
+            'active_subscribers'   => User::where('role', 'subscribed_user')->orWhere('is_subscribed', true)->count(),
+            'books_this_month'     => Book::where('book_type', 'book')->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count(),
+            'total_reservations'   => Reservation::count(),
         ];
 
         $booksQuery = $this->applyFilters(Book::where('book_type', 'book'));
@@ -76,36 +83,52 @@ class HomeController extends Controller
         return view('home', compact('stats', 'books', 'genres'));
     }
 
+    public function browseAjax(Request $request)
+    {
+        $booksQuery = $this->applyFilters(Book::where('book_type', 'book'));
+        $books = $booksQuery->get();
+
+        $html = view('partials.browse_results', compact('books'))->render();
+
+        return response()->json([
+            'html' => $html,
+            'count' => $books->count(),
+        ]);
+    }
+
     public function show(Book $book)
     {
         $alreadyBorrowed = false;
         $alreadyReserved = false;
         $atLimit         = false;
-        $isBookmarked    = false;
-        $canRead         = false;
-        $userReview      = null;
+            $isBookmarked    = false;
+            $canRead         = false;
+            $userReview      = null;
+            $activeBorrowing = null;
 
-        if (auth()->check()) {
-            $userId = auth()->id();
-            $user   = auth()->user();
+            if (auth()->check()) {
+                $userId = auth()->id();
+                $user   = auth()->user();
+                $isAdminOrStaff = $user->isAdminOrStaff();
 
-            $currentBorrowings = BorrowRecord::where('user_id', $userId)
-                ->whereNull('returned_at')
-                ->pluck('book_id');
+                $currentBorrowings = BorrowRecord::where('user_id', $userId)
+                    ->whereNull('returned_at')
+                    ->pluck('book_id');
 
-            $reservations = Reservation::where('user_id', $userId)
-                ->where('status', 'pending')
-                ->pluck('book_id');
+                $reservations = Reservation::where('user_id', $userId)
+                    ->where('status', 'pending')
+                    ->pluck('book_id');
 
-            $limit           = $user->isSubscribed() ? 25 : 5;
-            $alreadyBorrowed = $currentBorrowings->contains($book->id);
-            $alreadyReserved = $reservations->contains($book->id);
-            $atLimit         = $currentBorrowings->count() >= $limit;
-            $isBookmarked    = Bookmark::where('user_id', $userId)->where('book_id', $book->id)->exists();
-            $canRead         = $alreadyBorrowed;
+                $limit           = $user->isSubscribed() ? 25 : 5;
+                $alreadyBorrowed = $currentBorrowings->contains($book->id);
+                $alreadyReserved = $reservations->contains($book->id);
+                $atLimit         = $currentBorrowings->count() >= $limit;
+                $isBookmarked    = Bookmark::where('user_id', $userId)->where('book_id', $book->id)->exists();
+                $canRead         = $alreadyBorrowed || $isAdminOrStaff;
+                $activeBorrowing = BorrowRecord::where('user_id', $userId)->where('book_id', $book->id)->whereNull('returned_at')->first();
 
-            $userReview = BookReview::where('user_id', $userId)->where('book_id', $book->id)->first();
-        }
+                $userReview = BookReview::where('user_id', $userId)->where('book_id', $book->id)->first();
+            }
 
         $borrowCount = BorrowRecord::where('book_id', $book->id)->count();
         $editHistory = $book->editHistories()->with('user')->take(30)->get();
@@ -121,7 +144,7 @@ class HomeController extends Controller
         return view('books.show', compact(
             'book', 'alreadyBorrowed', 'alreadyReserved', 'atLimit',
             'isBookmarked', 'borrowCount', 'editHistory', 'related',
-            'canRead', 'userReview', 'reviews', 'avgRating'
+            'canRead', 'userReview', 'reviews', 'avgRating', 'activeBorrowing'
         ));
     }
 
@@ -181,8 +204,16 @@ class HomeController extends Controller
         $books = collect();
         $users = collect();
 
+        $genres = Book::select('genre')
+            ->distinct()
+            ->whereNotNull('genre')
+            ->whereNotIn('genre', ['Manga', 'Comic'])
+            ->where('book_type', 'book')
+            ->orderBy('genre')
+            ->pluck('genre');
+
         if ($q !== '') {
-            $books = Book::query()
+            $booksQuery = Book::query()
                 ->where('book_type', 'book')
                 ->whereNotIn('genre', ['Manga', 'Comic'])
                 ->where(function ($query) use ($q) {
@@ -193,10 +224,30 @@ class HomeController extends Controller
                         ->orWhere('isbn_13', 'like', "%{$q}%")
                         ->orWhere('isbn_10', 'like', "%{$q}%")
                         ->orWhere('description', 'like', "%{$q}%");
-                })
-                ->latest()
-                ->take(25)
-                ->get();
+                });
+
+            if ($genre = $request->input('genre')) {
+                $booksQuery->where('genre', $genre);
+            }
+
+            if ($availability = $request->input('availability')) {
+                if ($availability === 'available') {
+                    $booksQuery->where('available_copies', '>', 0);
+                } elseif ($availability === 'unavailable') {
+                    $booksQuery->where('available_copies', 0);
+                }
+            }
+
+            $sort = $request->input('sort', 'latest');
+            match ($sort) {
+                'year_asc'   => $booksQuery->orderBy('published_year', 'asc'),
+                'year_desc'  => $booksQuery->orderBy('published_year', 'desc'),
+                'title_asc'  => $booksQuery->orderBy('title', 'asc'),
+                'title_desc' => $booksQuery->orderBy('title', 'desc'),
+                default      => $booksQuery->latest(),
+            };
+
+            $books = $booksQuery->take(25)->get();
 
             $users = User::query()
                 ->where(function ($query) use ($q) {
@@ -213,6 +264,6 @@ class HomeController extends Controller
                 ->get();
         }
 
-        return view('search', compact('q', 'books', 'users'));
+        return view('search', compact('q', 'books', 'users', 'genres'));
     }
 }

@@ -27,6 +27,11 @@ class Book extends Model
     public function reservations()  { return $this->hasMany(Reservation::class); }
     public function reviews()       { return $this->hasMany(BookReview::class)->latest(); }
 
+    public function scopeAvailable($query)
+    {
+        return $query->where('available_copies', '>', 0)->where('status', 'available');
+    }
+
     public function getStatusAttribute(): string
     {
         return $this->available_copies > 0 ? 'available' : 'unavailable';
@@ -69,11 +74,22 @@ class Book extends Model
 
     public function noImageSvg(): string
     {
-        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="190">'
-             . '<rect width="128" height="190" fill="#e5e7eb"/>'
-             . '<text x="64" y="80" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af" text-anchor="middle">image</text>'
-             . '<text x="64" y="98" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af" text-anchor="middle">not</text>'
-             . '<text x="64" y="116" font-family="Arial,sans-serif" font-size="11" fill="#9ca3af" text-anchor="middle">available</text>'
+        // Generate a pleasant, deterministic color from the title hash
+        $hash = md5($this->title ?? 'book');
+        $hue = hexdec(substr($hash, 0, 2)) % 360;
+        $bgLight = "hsl({$hue}, 55%, 92%)";
+        $bgDark  = "hsl({$hue}, 45%, 85%)";
+        $iconColor = "hsl({$hue}, 50%, 55%)";
+
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="600" viewBox="0 0 400 600">'
+             . '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="' . $bgLight . '"/><stop offset="100%" stop-color="' . $bgDark . '"/></linearGradient></defs>'
+             . '<rect width="400" height="600" fill="url(#g)" rx="12"/>'
+             . '<g fill="none" stroke="' . $iconColor . '" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity="0.55">'
+             . '<path d="M120 180h160M120 230h160M120 280h100"/>'
+             . '<rect x="120" y="340" width="160" height="140" rx="8"/>'
+             . '<path d="M160 380l40 40 40-40"/>'
+             . '</g>'
+             . '<text x="200" y="560" font-family="Georgia,serif" font-size="28" fill="' . $iconColor . '" text-anchor="middle" opacity="0.7">' . htmlspecialchars($this->title ?? 'Untitled') . '</text>'
              . '</svg>';
         return 'data:image/svg+xml;base64,' . base64_encode($svg);
     }

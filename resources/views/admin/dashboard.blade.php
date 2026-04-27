@@ -600,9 +600,20 @@
                 <span class="section-card-title">All Users</span>
                 <span class="badge" style="font-size:11px;">{{ $users->count() }} total</span>
             </div>
+            <div class="section-card-body" style="padding-bottom:16px;">
+                <form method="GET" action="{{ route('admin.dashboard') }}" style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+                    <input type="hidden" name="section" value="users">
+                    <input type="text" name="user_search" value="{{ request('user_search') }}" placeholder="Search by ID, name, username, or email…" style="flex:1;min-width:200px;height:38px;font-size:13px;">
+                    <button type="submit" class="btn-sm" style="height:38px;">Search</button>
+                    @if(request('user_search'))
+                        <a href="{{ route('admin.dashboard', ['section' => 'users']) }}" class="btn-sm btn-sm-outline" style="height:38px;display:inline-flex;align-items:center;text-decoration:none;">Clear</a>
+                    @endif
+                </form>
+            </div>
             <table class="data-table">
                 <thead>
                     <tr>
+                        <th>ID</th>
                         <th>User</th>
                         <th>Email</th>
                         <th>Current Role</th>
@@ -613,6 +624,7 @@
                 <tbody>
                     @forelse($users as $user)
                         <tr>
+                            <td style="font-family:var(--font-mono);font-size:12px;color:var(--muted);">#{{ $user->id }}</td>
                             <td>
                                 <div style="display:flex;align-items:center;gap:10px;">
                                     <img src="{{ $user->avatarUrl() }}" alt="" style="width:32px;height:32px;object-fit:cover;border:1px solid var(--border);border-radius:50%;flex-shrink:0;">
@@ -652,7 +664,7 @@
                                         @csrf @method('PUT')
                                         <select name="role" style="padding:5px 8px;width:auto;font-size:12px;height:auto;">
                                             <option value="user"             {{ $user->role === 'user'            ? 'selected' : '' }}>User</option>
-                                            <option value="subscribed_user"  {{ $user->role === 'subscribed_user' ? 'selected' : '' }}>Subscribed User</option>
+                                            <option value="subscribed_user"  {{ $user->role === 'subscribed_user' ? 'selected' : '' }}>Subscriber</option>
                                             <option value="staff"            {{ $user->role === 'staff'           ? 'selected' : '' }}>Staff</option>
                                             <option value="admin"            {{ $user->role === 'admin'           ? 'selected' : '' }}>Admin</option>
                                         </select>
@@ -664,7 +676,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5"><div class="empty-state">No users found.</div></td></tr>
+                        <tr><td colspan="6"><div class="empty-state">No users found.</div></td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -750,9 +762,24 @@
         </div>
 
         <div class="section-card">
+            <div class="section-card-header">
+                <span class="section-card-title">All Payments</span>
+                <span class="badge" style="font-size:11px;">{{ $payments->count() }} total</span>
+            </div>
+            <div class="section-card-body" style="padding-bottom:16px;">
+                <form method="GET" action="{{ route('admin.dashboard') }}" style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+                    <input type="hidden" name="section" value="payments">
+                    <input type="text" name="receipt_search" value="{{ request('receipt_search') }}" placeholder="Search by receipt ID, payment ID, or reference…" style="flex:1;min-width:200px;height:38px;font-size:13px;">
+                    <button type="submit" class="btn-sm" style="height:38px;">Search</button>
+                    @if(request('receipt_search'))
+                        <a href="{{ route('admin.dashboard', ['section' => 'payments']) }}" class="btn-sm btn-sm-outline" style="height:38px;display:inline-flex;align-items:center;text-decoration:none;">Clear</a>
+                    @endif
+                </form>
+            </div>
             <table class="data-table">
                 <thead>
                     <tr>
+                        <th>Receipt #</th>
                         <th>User</th>
                         <th>Book</th>
                         <th>Amount</th>
@@ -764,6 +791,7 @@
                 <tbody>
                     @forelse($payments as $payment)
                         <tr>
+                            <td style="font-family:var(--font-mono);font-size:12px;color:var(--muted);">#{{ $payment->id }}</td>
                             <td>{{ $payment->user->name ?? 'Unknown' }}</td>
                             <td>{{ $payment->borrowRecord->book->title ?? 'Deleted' }}</td>
                             <td style="font-family:var(--font-mono);font-size:13px;">₱{{ number_format($payment->amount, 2) }}</td>
@@ -780,7 +808,7 @@
                             <td style="font-size:12px;white-space:nowrap;">{{ $payment->paid_at?->format('M d, Y') ?? $payment->created_at->format('M d, Y') }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="6"><div class="empty-state">No payments yet.</div></td></tr>
+                        <tr><td colspan="7"><div class="empty-state">No payments yet.</div></td></tr>
                     @endforelse
                 </tbody>
             </table>

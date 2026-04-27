@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="light">
 <head>
     <meta charset="utf-8">
@@ -15,9 +15,6 @@
         :root,
         [data-theme="light"] {
             --bg-page:          #eef0f5;
-            --bg-mesh-1:        rgba(120,140,255,0.12);
-            --bg-mesh-2:        rgba(200,150,255,0.08);
-            --bg-mesh-3:        rgba(100,200,220,0.07);
             --black:            #111827;
             --white:            #ffffff;
             --glass-bg:         rgba(255,255,255,0.65);
@@ -49,9 +46,6 @@
 
         [data-theme="dark"] {
             --bg-page:          #0c0e14;
-            --bg-mesh-1:        rgba(79,110,247,0.10);
-            --bg-mesh-2:        rgba(160,80,255,0.07);
-            --bg-mesh-3:        rgba(0,180,200,0.06);
             --black:            #e8eaf0;
             --white:            #161a24;
             --glass-bg:         rgba(22,26,36,0.72);
@@ -78,7 +72,7 @@
             --radius-sm:        10px;
         }
 
-        html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+        html { font-size: 17px; -webkit-font-smoothing: antialiased; }
         body {
             font-family: var(--font-sans);
             background: var(--bg-page);
@@ -205,12 +199,12 @@
             background: var(--white); border: 1px solid var(--border);
             box-shadow: var(--shadow-lg); z-index: 200;
             border-radius: 16px; overflow: hidden;
-            transition: opacity .25s cubic-bezier(0.34,1.2,0.64,1), transform .25s cubic-bezier(0.34,1.2,0.64,1), visibility 0s linear .25s;
+            transition: opacity .25s ease, transform .25s ease, visibility 0s linear .25s;
         }
         .icon-dropdown-panel.open {
             visibility: visible; opacity: 1;
             transform: translateY(0) scale(1);
-            transition: opacity .25s cubic-bezier(0.34,1.2,0.64,1), transform .25s cubic-bezier(0.34,1.2,0.64,1), visibility 0s;
+            transition: opacity .25s ease, transform .25s ease, visibility 0s;
         }
         .icon-dropdown-header {
             display: flex; justify-content: space-between; align-items: center;
@@ -460,10 +454,11 @@
             margin-bottom: 22px; 
             box-shadow: var(--glass-shadow); 
             border-radius: 18px; 
-            transition: background .25s, border-color .25s, box-shadow .3s, transform .25s cubic-bezier(0.34,1.2,0.64,1); 
+            transition: background .25s, border-color .25s, box-shadow .3s, transform .2s ease; 
         }
-        .card:hover { 
-            box-shadow: var(--glass-shadow-lg); 
+        .card:hover {
+            box-shadow: var(--glass-shadow-lg);
+            transform: translateY(-2px);
         }
         .card h1 { font-size: 28px; font-weight: 500; margin-bottom: 8px; color: var(--black); }
         .card h2 { font-size: 19px; font-weight: 500; margin-bottom: 18px; color: var(--black); }
@@ -473,49 +468,6 @@
         .grid-2 { grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); }
         .grid-3 { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
         .stats { font-size: 34px; font-weight: 300; margin: 10px 0 0; font-family: var(--font-disp); letter-spacing: .02em; color: var(--black); }
-
-        /* ── BOOK CARDS ── */
-        .book-card {
-            cursor: pointer;
-            border: 1px solid var(--book-card-border);
-            border-radius: 12px; overflow: hidden;
-            background: var(--book-card-bg);
-            transition: transform .28s cubic-bezier(0.34,1.56,0.64,1), box-shadow .28s ease, border-color .2s ease;
-            display: block; color: inherit;
-            position: relative;
-        }
-        .book-card::after {
-            content: '';
-            position: absolute; inset: 0;
-            border-radius: 12px;
-            background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 60%);
-            opacity: 0;
-            transition: opacity .28s ease;
-            pointer-events: none;
-        }
-        .book-card:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: 0 20px 48px rgba(0,0,0,0.20), 0 6px 16px rgba(0,0,0,0.12);
-            border-color: var(--black);
-            opacity: 1;
-        }
-        .book-card:hover::after { opacity: 1; }
-        .book-card:active { transform: translateY(-4px) scale(1.01); }
-        .book-card img {
-            width: 100%; height: 200px; object-fit: cover; display: block;
-            background: var(--mid);
-            transition: transform .4s cubic-bezier(0.34,1.2,0.64,1);
-        }
-        .book-card:hover img { transform: scale(1.06); }
-        .book-card-body { padding: 14px; }
-        .book-card-title {
-            font-weight: 600; font-size: 14.5px;
-            overflow: hidden; display: -webkit-box;
-            -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-            margin-bottom: 4px; color: var(--book-title-color); line-height: 1.4;
-        }
-        .book-card-author { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
-        .book-card-badges { display: flex; flex-wrap: wrap; gap: 4px; }
 
         /* ── FORMS ── */
         input, textarea, select {
@@ -547,7 +499,7 @@
             cursor: pointer; 
             letter-spacing: .03em; 
             border-radius: 9px; 
-            transition: opacity .18s, transform .15s cubic-bezier(0.34,1.56,0.64,1), box-shadow .18s; 
+            transition: opacity .18s, transform .15s ease, box-shadow .18s; 
             font-weight: 500;
         }
         button:hover { 
@@ -639,7 +591,11 @@
         .footer { background: var(--glass-bg); backdrop-filter: blur(16px) saturate(1.4); border-top: 1px solid var(--glass-border); margin-top: auto; position: relative; z-index: 1; }
         .footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 52px; padding: 68px 0 52px; }
         .footer-brand-name { font-family: var(--font-disp); font-size: 19px; letter-spacing: .08em; color: var(--black); display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-        .footer-brand-icon { width: 30px; height: 30px; border: 1.5px solid var(--black); display: flex; align-items: center; justify-content: center; font-size: 11px; font-family: var(--font-mono); flex-shrink: 0; border-radius: 6px; }
+        .footer-brand-icon { width: 34px; height: 34px; object-fit: contain; flex-shrink: 0; display: block; align-self: center; }
+        .logo-light { display: inline-block; }
+        .logo-dark  { display: none; }
+        [data-theme="dark"] .logo-light { display: none; }
+        [data-theme="dark"] .logo-dark  { display: inline-block; }
         .footer-brand-desc { font-size: 15px; color: var(--muted); line-height: 1.8; max-width: 230px; }
         .footer-col-title { font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--black); font-family: var(--font-mono); margin-bottom: 20px; }
         .footer-links { list-style: none; }
@@ -653,7 +609,7 @@
         .footer-bottom { padding: 22px 0 0; }
         .footer-bottom-bar { display: flex; justify-content: space-between; align-items: center; }
         .footer-copy { font-size: 12px; color: var(--muted); font-family: var(--font-mono); letter-spacing: .04em; }
-        .footer-big-word { font-family: var(--font-disp); font-size: clamp(80px, 14vw, 200px); line-height: .85; color: var(--black); text-align: right; user-select: none; display: block; margin-top: 8px; opacity: .05; }
+        .footer-big-text { font-family: var(--font-disp); font-size: 96px; letter-spacing: .04em; color: var(--black); line-height: 1; opacity: .18; user-select: none; text-align: right; flex-shrink: 0; }
 
         /* ── RESPONSIVE ── */
         @media (max-width: 768px) {
@@ -666,46 +622,378 @@
         @media (max-width: 480px) { .footer-grid { grid-template-columns: 1fr; } }
 
         /* ── GLOBAL TRANSITIONS ── */
-        * { transition: background-color .2s ease, border-color .2s ease, color .2s ease; }
-        .book-card { transition: transform .28s cubic-bezier(0.34,1.56,0.64,1), box-shadow .28s ease, border-color .2s ease !important; }
-        .side-drawer { transition: left 0.3s cubic-bezier(0.4,0,0.2,1) !important; }
-        .icon-dropdown-panel, .profile-menu-panel { transition: opacity .22s ease, transform .22s ease, visibility 0s linear .22s !important; }
-        .icon-dropdown-panel.open, .profile-menu-panel.open { transition: opacity .22s ease, transform .22s ease, visibility 0s !important; }
-        .drawer-link { transition: background .12s, padding-left .18s !important; }
+        html, body, .nav, .card, .book-card, button, a, input, select, textarea {
+            transition: background-color .25s ease,
+                        border-color .25s ease,
+                        color .25s ease,
+                        box-shadow .25s ease;
+        }
+        .book-card { transition: transform .2s ease, box-shadow .2s ease, border-color .15s ease !important; }
+        .side-drawer { transition: left 0.3s ease !important; }
+        .icon-dropdown-panel, .profile-menu-panel { transition: opacity .25s ease, transform .25s ease, visibility 0s linear .25s !important; }
+        .icon-dropdown-panel.open, .profile-menu-panel.open { transition: opacity .25s ease, transform .25s ease, visibility 0s !important; }
+        .drawer-link { transition: background .12s, padding-left .18s ease !important; }
+
+        /* ── BUTTONS ── */
+        button, .btn-outline, .receipt-btn-primary, .receipt-btn-secondary {
+            transition: opacity .15s ease, transform .15s ease, box-shadow .2s ease, background-color .2s ease, border-color .2s ease !important;
+        }
+        a {
+            transition: opacity .15s ease, color .15s ease, padding-left .15s ease !important;
+        }
+
+        /* ── SMOOTH SCROLL REVEAL STAGGER ── */
+        .reveal-stagger > * {
+            opacity: 0;
+            transform: translateY(12px);
+            transition: opacity .4s ease, transform .4s ease;
+        }
+        .reveal-stagger.visible > *:nth-child(1) { transition-delay: 0s; opacity: 1; transform: translateY(0); }
+        .reveal-stagger.visible > *:nth-child(2) { transition-delay: .06s; opacity: 1; transform: translateY(0); }
+        .reveal-stagger.visible > *:nth-child(3) { transition-delay: .12s; opacity: 1; transform: translateY(0); }
+        .reveal-stagger.visible > *:nth-child(4) { transition-delay: .18s; opacity: 1; transform: translateY(0); }
+        .reveal-stagger.visible > *:nth-child(5) { transition-delay: .24s; opacity: 1; transform: translateY(0); }
+        .reveal-stagger.visible > *:nth-child(6) { transition-delay: .30s; opacity: 1; transform: translateY(0); }
 
         /* ── PAGE ANIMATIONS ── */
-        @keyframes pageIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes cardIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes navSlide { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pageIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes cardIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes navSlide { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
 
-        .page-body { animation: pageIn .45s ease both; }
-        .nav { animation: navSlide .35s ease both; }
-        .card { animation: cardIn .5s ease both; }
-        .card:nth-child(2) { animation-delay: .06s; }
-        .card:nth-child(3) { animation-delay: .12s; }
-        .card:nth-child(4) { animation-delay: .18s; }
-        .card:nth-child(5) { animation-delay: .22s; }
+        .page-body { animation: pageIn .3s ease both; }
+        .nav { animation: navSlide .25s ease both; }
+        .card { animation: cardIn .3s ease both; }
+        .card:nth-child(2) { animation-delay: .04s; }
+        .card:nth-child(3) { animation-delay: .08s; }
+        .card:nth-child(4) { animation-delay: .12s; }
+        .card:nth-child(5) { animation-delay: .16s; }
 
         /* Flash messages animate in */
-        .flash { animation: cardIn .4s ease both; }
+        .flash { animation: cardIn .25s ease both; }
 
         /* Sidebar drawer link stagger on open */
-        .side-drawer.open .drawer-link:nth-child(1) { animation: cardIn .25s ease both; }
-        .side-drawer.open .drawer-link:nth-child(2) { animation: cardIn .25s .04s ease both; }
-        .side-drawer.open .drawer-link:nth-child(3) { animation: cardIn .25s .08s ease both; }
-        .side-drawer.open .drawer-link:nth-child(4) { animation: cardIn .25s .12s ease both; }
-        .side-drawer.open .drawer-link:nth-child(5) { animation: cardIn .25s .16s ease both; }
+        .side-drawer.open .drawer-link:nth-child(1) { animation: cardIn .2s ease both; }
+        .side-drawer.open .drawer-link:nth-child(2) { animation: cardIn .2s .03s ease both; }
+        .side-drawer.open .drawer-link:nth-child(3) { animation: cardIn .2s .06s ease both; }
+        .side-drawer.open .drawer-link:nth-child(4) { animation: cardIn .2s .09s ease both; }
+        .side-drawer.open .drawer-link:nth-child(5) { animation: cardIn .2s .12s ease both; }
 
         /* ── SCROLL REVEAL ── */
         .reveal {
             opacity: 0;
-            transform: translateY(28px);
-            transition: opacity .6s ease, transform .6s ease;
+            transform: translateY(12px);
+            transition: opacity .4s ease, transform .4s ease;
         }
         .reveal.visible {
             opacity: 1;
             transform: translateY(0);
         }
+
+        /* ── TOAST NOTIFICATIONS ── */
+        .toast-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+        .toast {
+            pointer-events: auto;
+            background: var(--glass-bg-strong);
+            backdrop-filter: blur(20px) saturate(1.6);
+            -webkit-backdrop-filter: blur(20px) saturate(1.6);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow-lg);
+            padding: 14px 20px;
+            border-radius: 12px;
+            min-width: 280px;
+            max-width: 380px;
+            font-size: 14.5px;
+            color: var(--black);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transform: translateX(120%);
+            opacity: 0;
+            transition: transform .35s ease, opacity .25s ease;
+        }
+        .toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        .toast-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        .toast-success .toast-icon { background: rgba(22,163,74,.12); color: #15803d; }
+        .toast-error   .toast-icon { background: rgba(220,38,38,.12); color: #b91c1c; }
+        .toast-warning .toast-icon { background: rgba(217,119,6,.12); color: #b45309; }
+        [data-theme="dark"] .toast-success .toast-icon { color: #4ade80; }
+        [data-theme="dark"] .toast-error   .toast-icon { color: #f87171; }
+        [data-theme="dark"] .toast-warning .toast-icon { color: #fbbf24; }
+        .toast-close {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-size: 16px;
+            cursor: pointer;
+            padding: 0 0 0 8px;
+            line-height: 1;
+            opacity: .6;
+            transition: opacity .15s;
+        }
+        .toast-close:hover { opacity: 1; }
+
+        /* ── LOADING SPINNER ── */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner {
+            width: 18px; height: 18px;
+            border: 2px solid var(--border);
+            border-top-color: var(--black);
+            border-radius: 50%;
+            animation: spin .6s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .btn-loading { position: relative; color: transparent !important; pointer-events: none; }
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            left: 50%; top: 50%;
+            width: 16px; height: 16px;
+            margin: -8px 0 0 -8px;
+            border: 2px solid rgba(255,255,255,.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin .6s linear infinite;
+        }
+        .btn-outline.btn-loading::after {
+            border-color: var(--muted);
+            border-top-color: var(--black);
+        }
+
+        .book-card {
+            cursor: pointer;
+            border: 1px solid var(--book-card-border);
+            border-radius: 12px; overflow: hidden;
+            background: var(--book-card-bg);
+            transition: transform .2s ease, box-shadow .2s ease, border-color .15s ease;
+            display: block; color: inherit;
+            position: relative;
+        }
+        .book-card::after {
+            content: '';
+            position: absolute; inset: 0;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 60%);
+            opacity: 0;
+            transition: opacity .2s ease;
+            pointer-events: none;
+        }
+        .book-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
+            border-color: var(--accent);
+            opacity: 1;
+        }
+        .book-card:hover::after { opacity: 1; }
+        .book-card:active { transform: translateY(-1px); }
+        .book-card img {
+            width: 100%; aspect-ratio: 3 / 4; object-fit: cover; display: block;
+            background: var(--mid);
+            transition: transform .25s ease;
+        }
+        .book-card:hover img { transform: scale(1.02); }
+        .book-card-body { padding: 14px; }
+        .book-card-title {
+            font-weight: 600; font-size: 14.5px;
+            overflow: hidden; display: -webkit-box;
+            -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+            margin-bottom: 4px; color: var(--book-title-color); line-height: 1.4;
+        }
+        .book-card-author { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+        .book-card-badges { display: flex; flex-wrap: wrap; gap: 4px; }
+
+        /* ── SMOOTH IMAGE LOAD ── */
+        .img-fade {
+            opacity: 0;
+            transition: opacity .5s ease;
+        }
+        .img-fade.loaded {
+            opacity: 1;
+        }
+
+        /* Custom scrollbar for the whole page */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+        html { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+        /* Soft glow on focused elements */
+        a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+            box-shadow: 0 0 0 4px var(--accent-soft);
+        }
+
+        /* ── EMPTY STATE ── */
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--muted);
+        }
+        .empty-state-icon {
+            width: 64px; height: 64px;
+            margin: 0 auto 16px;
+            background: var(--off);
+            border: 1.5px dashed var(--border);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; color: var(--muted);
+        }
+        .empty-state-title { font-size: 16px; font-weight: 600; color: var(--black); margin-bottom: 6px; }
+        .empty-state-desc  { font-size: 14px; line-height: 1.6; max-width: 320px; margin: 0 auto; }
+
+        /* ── NOTIFICATION ITEMS ── */
+        .notif-item {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--mid);
+            display: flex; align-items: flex-start; gap: 14px;
+            transition: background .15s;
+        }
+        .notif-item:last-child { border-bottom: none; }
+        .notif-item:hover { background: var(--off); }
+        .notif-item.read { opacity: .55; }
+        .notif-icon {
+            width: 36px; height: 36px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; flex-shrink: 0;
+        }
+        .notif-icon.overdue { background: rgba(220,38,38,.10); }
+        .notif-icon.due_soon { background: rgba(217,119,6,.10); }
+        .notif-icon.payment_confirmed { background: rgba(22,163,74,.10); }
+        .notif-icon.default { background: var(--off); }
+        .notif-body { flex: 1; min-width: 0; }
+        .notif-type-label {
+            font-size: 10px; font-weight: 700; letter-spacing: .08em;
+            text-transform: uppercase; font-family: var(--font-mono);
+            margin-bottom: 3px;
+        }
+        .notif-type-label.overdue { color: #dc2626; }
+        .notif-type-label.due_soon { color: #92400e; }
+        .notif-type-label.payment_confirmed { color: #15803d; }
+        .notif-type-label.default { color: var(--muted); }
+        .notif-message { font-size: 14.5px; color: var(--black); line-height: 1.5; margin: 0; }
+        .notif-meta { font-size: 12px; color: var(--muted); font-family: var(--font-mono); margin-top: 4px; }
+        .notif-badge-new {
+            background: #dc2626; color: #fff;
+            font-size: 9px; font-weight: 700; padding: 2px 7px;
+            border-radius: 999px; font-family: var(--font-mono);
+            letter-spacing: .04em; text-transform: uppercase;
+        }
+
+        /* ── MESSAGE BUBBLES (dark-mode vars) ── */
+        :root {
+            --msg-mine-bg: #111827;
+            --msg-mine-color: #ffffff;
+            --msg-theirs-bg: #f3f4f6;
+            --msg-theirs-color: #111827;
+        }
+        [data-theme="dark"] {
+            --msg-mine-bg: #4f6ef7;
+            --msg-mine-color: #ffffff;
+            --msg-theirs-bg: rgba(255,255,255,.08);
+            --msg-theirs-color: #e8eaf0;
+        }
+        .msg-bubble-inner {
+            max-width: 72%;
+            padding: 12px 16px;
+            border-radius: 14px;
+            line-height: 1.5;
+            font-size: 15px;
+            word-wrap: break-word;
+        }
+        .msg-bubble-mine {
+            background: var(--msg-mine-bg);
+            color: var(--msg-mine-color);
+            border-bottom-right-radius: 4px;
+        }
+        .msg-bubble-theirs {
+            background: var(--msg-theirs-bg);
+            color: var(--msg-theirs-color);
+            border-bottom-left-radius: 4px;
+        }
+        .msg-time {
+            font-size: 11px;
+            opacity: .55;
+            margin-top: 6px;
+            text-align: right;
+            font-family: var(--font-mono);
+        }
+
+        /* ── SELECT ARROW (custom dropdown) ── */
+        .select-arrow {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            padding-right: 38px !important;
+            cursor: pointer;
+        }
+        .select-arrow::-ms-expand {
+            display: none;
+        }
+        [data-theme="dark"] .select-arrow {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        }
+
+        /* ── SECTION HEADER ── */
+        .section-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 18px; flex-wrap: wrap; gap: 12px;
+        }
+        .section-header h2 { margin: 0; font-size: 18px; font-weight: 600; }
+        .section-header-link {
+            font-size: 13px; color: var(--muted);
+            display: flex; align-items: center; gap: 5px;
+            transition: color .15s;
+        }
+        .section-header-link:hover { color: var(--black); opacity: 1; }
+
+        /* ── STAT CARDS (mini) ── */
+        .stat-mini {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px;
+            transition: box-shadow .2s, border-color .2s;
+        }
+        .stat-mini:hover { box-shadow: var(--shadow-md); border-color: var(--black); }
+        .stat-mini-label {
+            font-size: 10px; font-weight: 700; letter-spacing: .1em;
+            text-transform: uppercase; font-family: var(--font-mono);
+            color: var(--muted); margin-bottom: 10px;
+        }
+        .stat-mini-value {
+            font-size: 32px; font-weight: 300;
+            font-family: var(--font-disp);
+            letter-spacing: .02em; color: var(--black); line-height: 1;
+        }
+        .stat-mini-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
     </style>
 </head>
 <body>
@@ -745,9 +1033,27 @@
         <img src="{{ auth()->user()->avatarUrl() }}" alt="avatar">
         <div>
             <div class="drawer-user-name">{{ auth()->user()->badgedName() }}</div>
-            <div class="drawer-user-role">{{ ucfirst(auth()->user()->role) }}</div>
+            @php
+                $drawerRoleLabel = match(auth()->user()->role) {
+                    'subscribed_user' => 'Subscriber',
+                    'admin' => 'Admin',
+                    'staff' => 'Staff',
+                    default => 'User',
+                };
+            @endphp
+            <div class="drawer-user-role">{{ $drawerRoleLabel }}</div>
         </div>
     </div>
+
+    @if(auth()->user()->isPatron())
+        <a href="{{ route('subscription.index') }}" class="drawer-link drawer-link-sub">
+            <span style="font-size:15px;line-height:1;display:inline-flex;align-items:center;justify-content:center;width:15px;flex-shrink:0;">✦</span>
+            {{ auth()->user()->isSubscribed() ? 'Manage Subscription' : 'Subscribe' }}
+        </a>
+    @endif
+
+    <span class="drawer-section-title">Account</span>
+    <a href="{{ route('user.profile') }}" class="drawer-link"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>My Profile</a>
 
     <span class="drawer-section-title">My Library</span>
     @if(auth()->user()->isAdmin())
@@ -755,10 +1061,6 @@
     @elseif(auth()->user()->isStaff())
         <a href="{{ route('staff.dashboard') }}" class="drawer-link"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Staff Dashboard</a>
     @else
-        <a href="{{ route('subscription.index') }}" class="drawer-link drawer-link-sub">
-            <span style="font-size:15px;line-height:1;display:inline-flex;align-items:center;justify-content:center;width:15px;flex-shrink:0;">✦</span>
-            {{ auth()->user()->isSubscribed() ? 'Manage Subscription' : 'Subscribe' }}
-        </a>
         <a href="{{ route('user.dashboard') }}" class="drawer-link"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
         <a href="{{ route('books.bookmarks') }}" class="drawer-link"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Bookmarks / Lists</a>
         <a href="{{ route('user.ratings') }}" class="drawer-link"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Ratings</a>
@@ -768,7 +1070,6 @@
     @endif
     <a href="{{ route('messages.index') }}" class="drawer-link"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Messages @if($unreadMessageCount > 0)<span style="font-family:var(--font-mono);font-size:11px;color:#888;margin-left:auto;">({{ $unreadMessageCount }})</span>@endif</a>
     <a href="{{ route('notifications.index') }}" class="drawer-link"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Notifications @if($unreadNotificationCount > 0)<span style="font-family:var(--font-mono);font-size:11px;color:#888;margin-left:auto;">({{ $unreadNotificationCount }})</span>@endif</a>
-    <a href="{{ route('user.profile') }}" class="drawer-link"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>My Profile</a>
     <form action="{{ route('logout') }}" method="POST" style="margin:0;">
         @csrf
         <button type="submit" class="drawer-link drawer-link-danger" style="width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--mid);cursor:pointer;font-family:var(--font-sans);border-radius:0;">
@@ -883,7 +1184,7 @@
                             <span class="profile-menu-name">{{ auth()->user()->badgedName() }}</span>
                         </button>
                         <div class="profile-menu-panel" id="profileMenuPanel">
-                            @if(auth()->user()->role === 'user')
+                            @if(auth()->user()->isPatron())
                                 <a href="{{ route('subscription.index') }}" class="sub-link">
                                     <span style="font-size:15px;line-height:1;display:inline-flex;align-items:center;justify-content:center;width:15px;flex-shrink:0;">✦</span>
                                     @if(auth()->user()->isSubscribed()) Manage Subscription <span class="sub-badge">ACTIVE</span>
@@ -893,7 +1194,7 @@
                             @endif
                             <span class="pm-section-label">Account</span>
                             <a href="{{ route('user.profile') }}"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>My Profile</a>
-                            @if(auth()->user()->role === 'user')
+                            @if(auth()->user()->isPatron())
                                 <a href="{{ route('user.dashboard') }}"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
                                 <a href="{{ route('books.bookmarks') }}"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Bookmarks</a>
                                 <a href="{{ route('user.publish') }}"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Publish a Book</a>
@@ -924,6 +1225,9 @@
     </div>
 </nav>
 
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
 <!-- Page Content -->
 <div class="page-body">
     <div class="wrap content-wrap">
@@ -943,13 +1247,16 @@
     </div>
 </div>
 
+
+
 <!-- FOOTER -->
 <footer class="footer">
     <div class="wrap">
         <div class="footer-grid">
             <div>
                 <div class="footer-brand-name">
-                    <div class="footer-brand-icon" style="font-size:9px; letter-spacing:.03em;">IVO.</div>
+                    <img src="/favicon1.png" alt="logo" class="footer-brand-icon logo-light" style="width:34px;height:34px;object-fit:contain;">
+                    <img src="/favicon.png" alt="logo" class="footer-brand-icon logo-dark" style="width:34px;height:34px;object-fit:contain;">
                     .Library
                 </div>
                 <p class="footer-brand-desc">A minimalist library management system designed for modern readers and institutions.</p>
@@ -965,7 +1272,7 @@
                     @endguest
                     @auth
                         <li><a href="{{ route('user.profile') }}">My Profile</a></li>
-                        @if(auth()->user()->role === 'user')
+                        @if(auth()->user()->isPatron())
                             <li><a href="{{ route('user.dashboard') }}">Dashboard</a></li>
                         @endif
                     @endauth
@@ -995,15 +1302,12 @@
                     <div class="footer-info-value" style="display:flex; align-items:flex-end; gap:0; flex-wrap:wrap;">
                         <div style="text-align:center; padding-right:10px; border-right:1px solid var(--border); margin-right:10px;">
                             <div style="font-size:15px; font-weight:500; letter-spacing:.02em;">+63</div>
-                         
                         </div>
                         <div style="text-align:center; padding-right:10px; border-right:1px solid var(--border); margin-right:10px;">
                             <div style="font-size:15px; font-weight:500; letter-spacing:.02em;">962</div>
-                          
                         </div>
                         <div style="text-align:center;">
                             <div style="font-size:15px; font-weight:500; letter-spacing:.02em;">612-5XXX</div>
-                           
                         </div>
                     </div>
                 </div>
@@ -1013,9 +1317,9 @@
         <hr class="footer-divider">
         <div class="footer-bottom">
             <div class="footer-bottom-bar">
-                <span class="footer-copy">&copy; 2022 &ndash; 2026 dotLibrary &nbsp;|&nbsp; All Rights Reserved</span>
+                <span class="footer-copy">&copy; 2022 &ndash; 2026 dotLibrary &nbsp;|&nbsp; All Rights Reserved &nbsp;|&nbsp; <a href="#" onclick="event.preventDefault();showToast('Open source soon!','info');" style="color:var(--muted);">Contribute</a></span>
+                <span class="footer-big-text">.LIBRARY</span>
             </div>
-            <div class="footer-big-word">.Library</div>
         </div>
     </div>
 </footer>
@@ -1181,7 +1485,73 @@ document.addEventListener('DOMContentLoaded',function(){
     var customDiv=document.getElementById('cookie-customize');
     var saveBtn=document.createElement('button');saveBtn.textContent='Save Preferences';saveBtn.className='btn-accept';saveBtn.style.marginTop='8px';saveBtn.style.width='auto';saveBtn.style.padding='7px 14px';saveBtn.onclick=saveCustomCookies;customDiv.appendChild(saveBtn);
     document.querySelectorAll('form[data-autofilter] select').forEach(function(el){el.addEventListener('change',function(){this.closest('form').submit();});});
+
+    // Smooth image loads
+    document.querySelectorAll('img').forEach(function(img){
+        img.classList.add('img-fade');
+        img.addEventListener('load',function(){this.classList.add('loaded');});
+        if(img.complete) img.classList.add('loaded');
+    });
 });
+
+/* ── TOAST SYSTEM ── */
+function showToast(message, type) {
+    type = type || 'success';
+    var container = document.getElementById('toastContainer');
+    if (!container) return;
+    var icons = { success: '✓', error: '✕', warning: '!' };
+    var toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+    toast.innerHTML = '<div class="toast-icon">' + icons[type] + '</div><span>' + message + '</span><button class="toast-close">×</button>';
+    container.appendChild(toast);
+    requestAnimationFrame(function() { toast.classList.add('show'); });
+    var remove = function() {
+        toast.classList.remove('show');
+        setTimeout(function(){ if(toast.parentNode) toast.parentNode.removeChild(toast); }, 400);
+    };
+    toast.querySelector('.toast-close').addEventListener('click', remove);
+    setTimeout(remove, 5000);
+}
+
+/* ── AJAX FORM SUBMIT ── */
+function ajaxFormSubmit(form, opts) {
+    opts = opts || {};
+    var btn = form.querySelector('[type="submit"]');
+    if(btn && opts.loadingClass) btn.classList.add(opts.loadingClass);
+    var action = form.action;
+    var method = form.method || 'POST';
+    var data = new FormData(form);
+    fetch(action, { method: method, headers: { 'X-CSRF-TOKEN': _csrfToken, 'X-Requested-With': 'XMLHttpRequest' }, body: data })
+    .then(function(r) { return r.text().then(function(t) { return { text: t, ok: r.ok, status: r.status }; }); })
+    .then(function(res) {
+        if(btn && opts.loadingClass) btn.classList.remove(opts.loadingClass);
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(res.text, 'text/html');
+        var flash = doc.querySelector('.flash.success');
+        var err = doc.querySelector('.flash.error');
+        if (flash) { showToast(flash.textContent.trim(), 'success'); }
+        if (err)     { showToast(err.textContent.trim(), 'error'); }
+        if (opts.onSuccess) opts.onSuccess(res, doc);
+    }).catch(function(e) {
+        if(btn && opts.loadingClass) btn.classList.remove(opts.loadingClass);
+        showToast('Something went wrong. Please refresh and try again.', 'error');
+    });
+}
+
+/* ── BORROW AJAX ── */
+function handleBorrow(form) {
+    ajaxFormSubmit(form, {
+        loadingClass: 'btn-loading',
+        onSuccess: function(res, doc) {
+            var success = !!doc.querySelector('.flash.success');
+            if (success) {
+                var readBtn = document.getElementById('readBookBtn');
+                if (readBtn) readBtn.style.display = '';
+                form.parentNode.innerHTML = '<span class="badge">You currently have this book borrowed</span>';
+            }
+        }
+    });
+}
 </script>
 </body>
 </html>

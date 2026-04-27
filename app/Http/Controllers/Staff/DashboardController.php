@@ -29,11 +29,32 @@ class DashboardController extends Controller
         ];
 
         $borrowings   = BorrowRecord::with(['book', 'user'])->latest()->get();
-        $users        = User::where('role', 'user')->with('borrowRecords')->latest()->get();
         $logs         = ActivityLog::with('user')->latest()->take(200)->get();
         $reservations = Reservation::with(['book', 'user'])->latest()->get();
-        $payments     = Payment::with(['user', 'borrowRecord.book'])->latest()->get();
         $submissions  = UserBook::with('user')->latest()->get();
+
+        // Users with optional ID search
+        $usersQuery = User::where('role', 'user')->with('borrowRecords')->latest();
+        if ($userSearch = request('user_search')) {
+            $usersQuery->where(function ($q) use ($userSearch) {
+                $q->where('id', $userSearch)
+                  ->orWhere('name', 'like', "%{$userSearch}%")
+                  ->orWhere('username', 'like', "%{$userSearch}%")
+                  ->orWhere('email', 'like', "%{$userSearch}%");
+            });
+        }
+        $users = $usersQuery->get();
+
+        // Payments with optional receipt ID search
+        $paymentsQuery = Payment::with(['user', 'borrowRecord.book'])->latest();
+        if ($receiptSearch = request('receipt_search')) {
+            $paymentsQuery->where(function ($q) use ($receiptSearch) {
+                $q->where('id', $receiptSearch)
+                  ->orWhere('finverse_payment_id', 'like', "%{$receiptSearch}%")
+                  ->orWhere('finverse_link_id', 'like', "%{$receiptSearch}%");
+            });
+        }
+        $payments = $paymentsQuery->get();
 
         return view('staff.dashboard', compact(
             'section', 'stats', 'borrowings',

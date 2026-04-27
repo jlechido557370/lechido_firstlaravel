@@ -70,6 +70,9 @@ class User extends Authenticatable
     public function isSubscribedUser(): bool { return $this->role === 'subscribed_user'; }
     public function isRegularUser(): bool    { return $this->role === 'user'; }
 
+    /** True for regular users AND subscribed users (patrons). */
+    public function isPatron(): bool         { return in_array($this->role, ['user', 'subscribed_user']); }
+
     /** True for admin OR staff — can access management dashboards. */
     public function isAdminOrStaff(): bool   { return in_array($this->role, ['admin', 'staff']); }
 
@@ -84,16 +87,22 @@ class User extends Authenticatable
      */
     public function isSubscribed(): bool
     {
-        // Role-based subscription (manually assigned by admin)
+        // Flag-based subscription (payment gateway)
+        $flagActive = $this->is_subscribed;
+
+        if ($flagActive && $this->subscription_expires_at && $this->subscription_expires_at->isPast()) {
+            // Expired — clear both flag and role to stay in sync
+            $this->update([
+                'is_subscribed' => false,
+                'role'          => $this->role === 'subscribed_user' ? 'user' : $this->role,
+            ]);
+            $flagActive = false;
+        }
+
+        // Role-based subscription takes precedence
         if ($this->role === 'subscribed_user') return true;
 
-        // Flag-based subscription (payment gateway)
-        if (!$this->is_subscribed) return false;
-        if ($this->subscription_expires_at && $this->subscription_expires_at->isPast()) {
-            $this->update(['is_subscribed' => false]);
-            return false;
-        }
-        return true;
+        return $flagActive;
     }
 
     // ── Social helpers ────────────────────────────────────────────────────────

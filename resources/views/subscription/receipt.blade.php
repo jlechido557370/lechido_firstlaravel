@@ -81,13 +81,11 @@
         display: flex; align-items: center; gap: 10px;
     }
     .receipt-brand-icon {
-        width: 32px; height: 32px;
-        border: 1.5px solid var(--black);
-        border-radius: 7px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 9px; font-family: var(--font-mono);
-        letter-spacing: .02em; color: var(--black);
+        width: 28px; height: 28px;
+        object-fit: contain;
         flex-shrink: 0;
+        display: block;
+        align-self: center;
     }
     .receipt-brand-name {
         font-family: var(--font-disp);
@@ -202,6 +200,25 @@
         letter-spacing: .04em;
         margin-top: 12px;
     }
+    .receipt-bottom-brand {
+        text-align: center;
+        margin-top: 28px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border);
+    }
+    .receipt-bottom-brand img {
+        width: 40px; height: 40px;
+        object-fit: contain;
+        margin-bottom: 8px;
+        opacity: .7;
+    }
+    .receipt-bottom-brand .brand-name {
+        font-family: var(--font-disp);
+        font-size: 16px;
+        letter-spacing: .06em;
+        color: var(--black);
+        opacity: .5;
+    }
 </style>
 
 <div class="receipt-page">
@@ -222,11 +239,12 @@
     <div class="receipt-card">
         <div class="receipt-card-header">
             <div class="receipt-brand-block">
-                <div class="receipt-brand-icon">IVO.</div>
                 <div class="receipt-brand-name">.Library</div>
             </div>
             <div class="receipt-date-block">
-                <div class="receipt-date-label">Receipt Date</div>
+                <div class="receipt-date-label">Receipt No.</div>
+                <div class="receipt-date-value" style="font-family:var(--font-mono);font-size:13px;">SUB-{{ str_pad($payment->id ?? rand(100000,999999), 6, '0', STR_PAD_LEFT) }}</div>
+                <div class="receipt-date-label" style="margin-top:6px;">Receipt Date</div>
                 <div class="receipt-date-value">{{ now()->format('M d, Y · h:i A') }}</div>
             </div>
         </div>
@@ -290,18 +308,20 @@
         </a>
     </div>
 
-    <p class="receipt-footer-note">Generated on {{ now()->format('M d, Y') }} &nbsp;·&nbsp; dotLibrary</p>
+    <p class="receipt-footer-note" style="margin-top:28px;text-align:center;">Generated on {{ now()->format('M d, Y') }} &nbsp;·&nbsp; dotLibrary</p>
 </div>
 
 {{-- Hidden print area --}}
 <div id="print-area" style="display:none;">
     <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 28px;">
         <div style="text-align: center; padding-bottom: 16px; margin-bottom: 20px; border-bottom: 2px solid #111;">
+            <img src="/favicon1.png" alt="logo" style="width:48px;height:48px;object-fit:contain;margin-bottom:8px;">
             <div style="font-weight: 700; font-size: 20px; letter-spacing: .06em;">.Library</div>
             <div style="color: #6b7280; font-size: 12px; margin-top: 5px; letter-spacing: .08em; text-transform: uppercase;">Subscription Receipt</div>
         </div>
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-            <tr><td style="padding: 8px 0; color: #6b7280; width: 40%; font-size:13px;">Receipt Date</td><td style="padding: 8px 0; font-size:14px;">{{ now()->format('F d, Y h:i A') }}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; width: 40%; font-size:13px;">Receipt No.</td><td style="padding: 8px 0; font-size:14px; font-family:monospace;"><strong>SUB-{{ str_pad($payment->id ?? rand(100000,999999), 6, '0', STR_PAD_LEFT) }}</strong></td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size:13px;">Receipt Date</td><td style="padding: 8px 0; font-size:14px;">{{ now()->format('F d, Y h:i A') }}</td></tr>
             <tr><td style="padding: 8px 0; color: #6b7280; font-size:13px;">Name</td><td style="padding: 8px 0; font-size:14px;">{{ $user->displayName() }}</td></tr>
             <tr><td style="padding: 8px 0; color: #6b7280; font-size:13px;">Account</td><td style="padding: 8px 0; font-size:14px;">{{ $user->email }}</td></tr>
             <tr><td style="padding: 8px 0; color: #6b7280; font-size:13px;">Plan</td><td style="padding: 8px 0; font-size:14px; font-weight:600;">{{ $label }}</td></tr>

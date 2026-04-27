@@ -77,8 +77,10 @@
             @endif
 
             <div style="margin-top: 14px; text-align: center; color: #9ca3af; font-size: 12px;">
-                Generated on {{ now()->format('M d, Y') }}.
+                Generated on {{ now()->format('M d, Y') }} &nbsp;·&nbsp; dotLibrary
             </div>
+
+
         </div>
 
         {{-- Modal footer --}}
@@ -98,6 +100,7 @@
 <div id="print-area" style="display: none;">
     <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 24px;">
         <div style="text-align: center; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+            <img src="/favicon1.png" alt="logo" style="width:48px;height:48px;object-fit:contain;margin-bottom:8px;">
             <div style="font-weight: bold; font-size: 18px;">Library Management System</div>
             <div style="color: #6b7280; font-size: 13px; margin-top: 4px;">Fine Payment Receipt</div>
         </div>
