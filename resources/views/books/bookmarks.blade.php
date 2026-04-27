@@ -3,58 +3,61 @@
 @section('title', 'My Bookmarks')
 
 @section('content')
-    <div class="card">
-        <h1>My Bookmarks</h1>
-        <p class="muted">Books you have saved.</p>
+    <div class="section-header">
+        <div>
+            <h1>My Bookmarks</h1>
+            <p class="muted">Books you have saved for later.</p>
+        </div>
+        <a href="{{ route('books.catalogue') }}" class="section-header-link">
+            Browse Catalogue &rarr;
+        </a>
     </div>
 
-    <div class="card">
-        <h2>Bookmarks</h2>
-
-        @if($bookmarks->isEmpty())
-            <p class="muted">
-                You have no bookmarked books. Visit a book page and click "Bookmark".
-            </p>
-        @else
-            <table>
-                <thead>
-                    <tr>
-                        <th>Book</th>
-                        <th>Author</th>
-                        <th>Genre</th>
-                        <th>Saved On</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($bookmarks as $bm)
-                        @php $book = $bm->book; @endphp
-
-                        @if($book)
-                        <tr>
-                            <td>
-                                <a href="{{ route('books.show', $book) }}">
-                                    {{ $book->title }}
-                                </a>
-                            </td>
-                            <td>{{ $book->author }}</td>
-                            <td>{{ $book->genre }}</td>
-                            <td>{{ $bm->created_at->format('M d, Y') }}</td>
-                            <td>
-                                <form method="POST" action="{{ route('books.bookmark', $book) }}">
-                                    @csrf
-                                    <button type="submit"
-                                            style="width:auto; padding:4px 10px; background:#dc2626;">
-                                        Remove
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                        @endif
-
-                    @endforeach
-                </tbody>
-            </table>
-        @endif
-    </div>
+    @if($bookmarks->isEmpty())
+        <div class="card">
+            <div class="empty-state">
+                <div class="empty-state-icon">🔖</div>
+                <div class="empty-state-title">No bookmarks yet</div>
+                <div class="empty-state-desc">
+                    Visit a book page and click "Bookmark" to save it here for quick access.
+                </div>
+            </div>
+        </div>
+    @else
+        <div class="grid grid-4">
+            @foreach($bookmarks as $bm)
+                @php $book = $bm->book; @endphp
+                @if($book)
+                <div class="book-card" onclick="window.location='{{ route('books.show', $book) }}'">
+                    <img src="{{ $book->coverUrl() }}" alt="{{ $book->title }}" loading="lazy"
+                         onerror="this.onerror=null; this.src='{{ $book->noImageSvg() }}'">
+                    <div class="book-card-body">
+                        <div class="book-card-title">{{ $book->title }}</div>
+                        <div class="book-card-author">{{ $book->author }}</div>
+                        <div class="book-card-badges">
+                            @if($book->genre)
+                                <span class="badge">{{ $book->genre }}</span>
+                            @endif
+                            <span class="badge {{ $book->status === 'available' ? 'badge-green' : 'badge-red' }}">
+                                {{ ucfirst($book->status) }}
+                            </span>
+                        </div>
+                        <div style="margin-top:10px; display:flex; align-items:center; justify-content:space-between;">
+                            <span style="font-size:11px; color:var(--muted); font-family:var(--font-mono);">
+                                Saved {{ $bm->created_at->format('M d, Y') }}
+                            </span>
+                            <form method="POST" action="{{ route('books.bookmark', $book) }}" style="margin:0;"
+                                  onclick="event.stopPropagation();">
+                                @csrf
+                                <button type="submit" class="btn-outline" style="padding:4px 10px; font-size:12px;">
+                                    Remove
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                @endif
+            @endforeach
+        </div>
+    @endif
 @endsection

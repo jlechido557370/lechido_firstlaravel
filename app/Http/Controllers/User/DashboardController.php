@@ -9,12 +9,21 @@ use App\Models\BorrowRecord;
 use App\Models\Payment;
 use App\Models\Reservation;
 use App\Models\UserNotification;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
     const MAX_BORROWS_FREE = 5;
     const MAX_BORROWS_SUB  = 25;
     const LOAN_DAYS        = 10;
+
+    /** Check if user can read without borrowing */
+    private function canReadWithoutBorrowing(): bool
+    {
+        $user = auth()->user();
+        return $user->isAdmin() || $user->isStaff();
+    }
 
     public function index()
     {
@@ -117,6 +126,18 @@ class DashboardController extends Controller
         $limit = $user->isSubscribed() ? self::MAX_BORROWS_SUB : self::MAX_BORROWS_FREE;
 
         $activeBorrows = BorrowRecord::where('user_id', $user->id)->whereNull('returned_at')->count();
+
+        Log::info('Borrow attempt', [
+            'user_id'         => $user->id,
+            'role'            => $user->role,
+            'is_subscribed'   => $user->is_subscribed,
+            'sub_expires_at'  => $user->subscription_expires_at?->toDateTimeString(),
+            'isSubscribed()'  => $user->isSubscribed(),
+            'active_borrows'  => $activeBorrows,
+            'limit'           => $limit,
+            'book_id'         => $book->id,
+        ]);
+
         if ($activeBorrows >= $limit) {
             if (! $user->isSubscribed()) {
                 return back()->with('subscription_prompt', true)
@@ -126,32 +147,41 @@ class DashboardController extends Controller
             return back()->with('error', 'You have reached the maximum limit of ' . self::MAX_BORROWS_SUB . ' borrowed books.');
         }
 
-        $alreadyBorrowed = BorrowRecord::where('user_id', $user->id)
-            ->where('book_id', $book->id)->whereNull('returned_at')->exists();
-        if ($alreadyBorrowed) {
-            return back()->with('error', 'You have already borrowed this book.');
+        try {
+            return DB::transaction(function () use ($book, $user) {
+                $freshBook = Book::lockForUpdate()->find($book->id);
+
+                if ($freshBook->available_copies <= 0) {
+                    return back()->with('error', 'No copies available. You can reserve this book instead.');
+                }
+
+                $alreadyBorrowed = BorrowRecord::where('user_id', $user->id)
+                    ->where('book_id', $book->id)->whereNull('returned_at')->exists();
+                if ($alreadyBorrowed) {
+                    return back()->with('error', 'You have already borrowed this book.');
+                }
+
+                BorrowRecord::create([
+                    'user_id'     => $user->id,
+                    'book_id'     => $book->id,
+                    'borrowed_at' => now(),
+                    'due_date'    => now()->addDays(self::LOAN_DAYS),
+                ]);
+
+                $freshBook->decrement('available_copies');
+
+                ActivityLog::record(
+                    'book_borrowed',
+                    "{$user->name} borrowed '{$book->title}'. Due: " . now()->addDays(self::LOAN_DAYS)->format('M d, Y'),
+                    ['book_id' => $book->id]
+                );
+
+                return back()->with('success', "You borrowed '{$book->title}'. Due in " . self::LOAN_DAYS . " days.");
+            });
+        } catch (\Exception $e) {
+            Log::error('Borrow failed: ' . $e->getMessage());
+            return back()->with('error', 'Failed to borrow book. Please try again.');
         }
-
-        if ($book->available_copies <= 0) {
-            return back()->with('error', 'No copies available. You can reserve this book instead.');
-        }
-
-        BorrowRecord::create([
-            'user_id'     => $user->id,
-            'book_id'     => $book->id,
-            'borrowed_at' => now(),
-            'due_date'    => now()->addDays(self::LOAN_DAYS),
-        ]);
-
-        $book->decrement('available_copies');
-
-        ActivityLog::record(
-            'book_borrowed',
-            "{$user->name} borrowed '{$book->title}'. Due: " . now()->addDays(self::LOAN_DAYS)->format('M d, Y'),
-            ['book_id' => $book->id]
-        );
-
-        return back()->with('success', "You borrowed '{$book->title}'. Due in " . self::LOAN_DAYS . " days.");
     }
 
     public function returnBook(BorrowRecord $borrowing)

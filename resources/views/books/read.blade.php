@@ -42,10 +42,25 @@
             </a>
         </div>
     </div>
+@elseif(isset($readUrl))
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <div style="background: #f3f4f6; padding: 10px 14px; border-bottom: 1px solid #e5e7eb; font-size: 13px; color: #6b7280;">
+            Direct reading source found.
+        </div>
+        @if($isPdf)
+            <iframe src="https://docs.google.com/gview?url={{ urlencode($readUrl) }}&embedded=true" style="width: 100%; height: 82vh; border: none;"></iframe>
+        @else
+            <iframe src="{{ $readUrl }}" style="width: 100%; height: 82vh; border: none;"></iframe>
+        @endif
+    </div>
 @else
     <div class="card">
         <h3 style="margin-bottom: 8px;">Online reading not available</h3>
         <p class="muted" style="margin-bottom: 16px;">We couldn't find an online version of <strong>{{ $book->title }}</strong> on Google Books. Try the alternatives below.</p>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; padding: 40px;">
+            <div class="spinner" style="width: 32px; height: 32px; border: 3px solid var(--border); border-top: 3px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            <p style="color: var(--muted);">Loading reader...</p>
+        </div>
     </div>
 @endif
 

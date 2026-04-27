@@ -18,6 +18,7 @@ use App\Http\Controllers\User\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/browse-ajax', [HomeController::class, 'browseAjax'])->name('browse.ajax');
 Route::get('/catalogue', [HomeController::class, 'catalogue'])->name('books.catalogue');
 Route::get('/search', [HomeController::class, 'search'])->name('search');
 Route::get('/books/{book}', [HomeController::class, 'show'])->name('books.show');
@@ -104,10 +105,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/publish', [UserBookController::class, 'store'])->name('user.publish.store');
     Route::get('/my-submissions', [UserBookController::class, 'mySubmissions'])->name('user.submissions');
 
+    Route::get('/messages/recent/json', [MessageController::class, 'recentJson'])->name('messages.recent.json');
     Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
     Route::get('/messages/{user}', [MessageController::class, 'conversation'])->name('messages.conversation');
     Route::post('/messages/{user}/send', [MessageController::class, 'send'])->name('messages.send');
-    Route::get('/messages/recent/json', [MessageController::class, 'recentJson'])->name('messages.recent.json');
+    Route::get('/messages/{user}/poll', [MessageController::class, 'poll'])->name('messages.poll');
 
     Route::get('/subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
     Route::get('/subscription/confirm', [SubscriptionController::class, 'confirmPage'])->name('subscription.confirm');

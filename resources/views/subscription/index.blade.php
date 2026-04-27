@@ -27,6 +27,26 @@
         line-height: 1;
         pointer-events: none;
     }
+    .sub-header-accent {
+        position: absolute;
+        top: -60px;
+        right: -60px;
+        width: 160px;
+        height: 160px;
+        border-radius: 50%;
+        border: 1px solid rgba(79,110,247,.08);
+        pointer-events: none;
+    }
+    .sub-header-accent-2 {
+        position: absolute;
+        bottom: -40px;
+        left: 60px;
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        border: 1px solid rgba(79,110,247,.06);
+        pointer-events: none;
+    }
 
     .sub-status-card {
         background: var(--glass-bg);
@@ -214,6 +234,8 @@
 
     {{-- SUBSCRIBED VIEW --}}
     <div class="sub-header">
+        <div class="sub-header-accent"></div>
+        <div class="sub-header-accent-2"></div>
         <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(22,163,74,.1);border:1px solid rgba(22,163,74,.25);padding:6px 16px;border-radius:999px;margin-bottom:16px;">
             <span style="width:7px;height:7px;border-radius:50%;background:#16a34a;display:inline-block;box-shadow:0 0 6px #16a34a;animation:pulse 2s infinite;"></span>
             <span style="font-size:11px;font-family:var(--font-mono);letter-spacing:.09em;color:#15803d;text-transform:uppercase;font-weight:600;">Active Subscriber</span>
@@ -299,6 +321,8 @@
 @else
     {{-- NON-SUBSCRIBED VIEW --}}
     <div class="sub-header">
+        <div class="sub-header-accent"></div>
+        <div class="sub-header-accent-2"></div>
         <div style="display:inline-flex;align-items:center;gap:8px;background:var(--accent-soft);border:1px solid rgba(79,110,247,.2);padding:6px 16px;border-radius:999px;margin-bottom:16px;">
             <span style="font-size:14px;">✦</span>
             <span style="font-size:11px;font-family:var(--font-mono);letter-spacing:.09em;color:var(--accent);text-transform:uppercase;font-weight:600;">Library Subscription</span>

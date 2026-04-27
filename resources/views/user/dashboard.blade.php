@@ -3,16 +3,19 @@
 @section('title', 'User Dashboard')
 
 @section('content')
+    @php
+        $userLimit = auth()->user()->isSubscribed() ? 25 : 5;
+    @endphp
     <div class="card">
         <h1>User Dashboard</h1>
-        <p class="muted">You can borrow up to 5 books at a time. Due in 10 days. Fine: ₱5/day overdue.</p>
+        <p class="muted">You can borrow up to {{ $userLimit }} books at a time. Due in 10 days. Fine: ₱5/day overdue.</p>
         @if($totalFines > 0)
             <div class="flash error">You have outstanding unpaid fines totaling <strong>₱{{ number_format($totalFines, 2) }}</strong>. Pay your fines to return books.</div>
         @endif
     </div>
 
     <div class="grid grid-4">
-        <div class="card"><div class="muted">Borrowed Now</div><div class="stats">{{ $stats['borrowed_now'] }} / 5</div></div>
+        <div class="card"><div class="muted">Borrowed Now</div><div class="stats">{{ $stats['borrowed_now'] }} / {{ $userLimit }}</div></div>
         <div class="card"><div class="muted">Total Borrowed</div><div class="stats">{{ $stats['books_seen'] }}</div></div>
         <div class="card"><div class="muted">Returned</div><div class="stats">{{ $stats['returned'] }}</div></div>
         <div class="card"><div class="muted">Overdue</div><div class="stats">{{ $stats['overdue'] }}</div></div>
